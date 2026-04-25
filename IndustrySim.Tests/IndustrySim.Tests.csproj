@@ -18,4 +18,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\IndustrySim.Core\IndustrySim.Core.csproj" />
+  </ItemGroup>
+
 </Project>
