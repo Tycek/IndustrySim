@@ -99,10 +99,26 @@
                     <DockPanel Grid.Row="2">
                         <TextBlock DockPanel.Dock="Top" Text="Build New Industry"
                                    FontWeight="SemiBold" Margin="0,4,0,4"/>
-                        <dg:DataGrid ItemsSource="{Binding Catalog}"
+                        <dg:DataGrid x:Name="CatalogGrid"
+                                     ItemsSource="{Binding Catalog}"
                                      AutoGenerateColumns="False" IsReadOnly="True"
                                      CanUserResizeColumns="True" CanUserSortColumns="False"
-                                     GridLinesVisibility="Horizontal">
+                                     GridLinesVisibility="Horizontal"
+                                     RowDetailsVisibilityMode="VisibleWhenSelected"
+                                     PointerPressed="CatalogGrid_PointerPressed"
+                                     Tapped="CatalogGrid_Tapped">
+                            <dg:DataGrid.RowDetailsTemplate>
+                                <DataTemplate x:DataType="vm:CatalogIndustryViewModel">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,*" Margin="12,6,12,8">
+                                        <TextBlock Grid.Column="0" Text="Inputs:"
+                                                   FontWeight="SemiBold" Margin="0,0,8,0"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding InputsSummary}"/>
+                                        <TextBlock Grid.Column="2" Text="Outputs:"
+                                                   FontWeight="SemiBold" Margin="24,0,8,0"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding OutputsSummary}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </dg:DataGrid.RowDetailsTemplate>
                             <dg:DataGrid.Columns>
                                 <dg:DataGridTextColumn Header="Name"         Binding="{Binding Name}"        Width="*"/>
                                 <dg:DataGridTextColumn Header="Build Cost"   Binding="{Binding BuildCost}"   Width="110"/>
