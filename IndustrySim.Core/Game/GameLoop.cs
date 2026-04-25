@@ -95,9 +95,9 @@ public class GameLoop
 
     /// <summary>
     /// Advances the game by one turn.
-    /// Returns the names of any mines that became depleted this turn.
+    /// Returns events that occurred (depleted mines, cancelled contracts).
     /// </summary>
-    public IReadOnlyList<string> ProcessTurn()
+    public TurnEvents ProcessTurn()
     {
         State.TurnNumber++;
 
@@ -131,12 +131,15 @@ public class GameLoop
                 State.Player.AddToInventory(output);
         }
 
-        // Execute active contracts. Skip (no penalty) if the player cannot fulfil this turn.
+        // Execute active contracts. A missed delivery earns a strike; 3 strikes cancels with a penalty.
+        var cancelledContracts = new List<string>();
         foreach (var contract in State.Player.ActiveContracts.ToList())
         {
+            bool fulfilled;
             if (contract.Type == OfferType.Sell) // market sells to player — player pays
             {
-                if (State.Player.Balance >= contract.TotalPerTurn)
+                fulfilled = State.Player.Balance >= contract.TotalPerTurn;
+                if (fulfilled)
                 {
                     State.Player.Balance -= contract.TotalPerTurn;
                     State.Player.AddToInventory(new Resource(contract.ResourceName, contract.QuantityPerTurn));
@@ -145,17 +148,30 @@ public class GameLoop
             else // Buy — market buys from player — player delivers resources
             {
                 var available = State.Player.Inventory.GetValueOrDefault(contract.ResourceName);
-                if (available >= contract.QuantityPerTurn)
+                fulfilled = available >= contract.QuantityPerTurn;
+                if (fulfilled)
                 {
                     State.Player.Inventory[contract.ResourceName] = available - contract.QuantityPerTurn;
                     State.Player.Balance += contract.TotalPerTurn;
                 }
             }
 
-            contract.TurnsRemaining--;
-        }
+            if (!fulfilled)
+            {
+                contract.Strikes++;
+                if (contract.Strikes >= 3)
+                {
+                    State.Player.Balance -= contract.CancellationPenalty;
+                    State.Player.ActiveContracts.Remove(contract);
+                    cancelledContracts.Add(contract.ResourceName);
+                    continue;
+                }
+            }
 
-        State.Player.ActiveContracts.RemoveAll(c => c.TurnsRemaining <= 0);
+            contract.TurnsRemaining--;
+            if (contract.TurnsRemaining <= 0)
+                State.Player.ActiveContracts.Remove(contract);
+        }
 
         // Deduct running costs. Closed mines (Capacity = 0) are excluded.
         foreach (var industry in State.Player.Industries)
@@ -165,6 +181,6 @@ public class GameLoop
             State.Player.Balance -= industry.RunningCost;
         }
 
-        return depletedThisTurn;
+        return new TurnEvents(depletedThisTurn, cancelledContracts);
     }
 }

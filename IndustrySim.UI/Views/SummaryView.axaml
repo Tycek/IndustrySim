@@ -20,10 +20,10 @@
                          GridLinesVisibility="Horizontal">
                 <dg:DataGrid.Columns>
                     <dg:DataGridTextColumn Header="Resource"               Binding="{Binding Resource}"             Width="*"/>
-                    <dg:DataGridTextColumn Header="Produced / Turn"        Binding="{Binding Produced}"             Width="130"/>
+                    <dg:DataGridTextColumn Header="Produced / Turn"        Binding="{Binding Produced}"             Width="150"/>
                     <dg:DataGridTextColumn Header="Industry Use"           Binding="{Binding IndustryUse}"          Width="110"/>
-                    <dg:DataGridTextColumn Header="Delivered to Contracts" Binding="{Binding DeliveredToContracts}" Width="160"/>
-                    <dg:DataGridTextColumn Header="Received from Contracts" Binding="{Binding ReceivedFromContracts}" Width="170"/>
+                    <dg:DataGridTextColumn Header="Delivered to Contracts" Binding="{Binding DeliveredToContracts}" Width="170"/>
+                    <dg:DataGridTextColumn Header="Received from Contracts" Binding="{Binding ReceivedFromContracts}" Width="180"/>
                     <dg:DataGridTextColumn Header="Net / Turn"             Binding="{Binding Net}"                  Width="100" SortMemberPath="NetValue"/>
                 </dg:DataGrid.Columns>
             </dg:DataGrid>

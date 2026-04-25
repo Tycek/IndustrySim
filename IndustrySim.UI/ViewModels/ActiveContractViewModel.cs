@@ -10,6 +10,7 @@ public class ActiveContractViewModel : ViewModelBase
     public string PricePerUnit    { get; }
     public string TotalPerTurn    { get; }
     public string TurnsRemaining  { get; }
+    public string Strikes         { get; }
     public string Status          { get; }
 
     public ActiveContractViewModel(Contract contract, bool canFulfillThisTurn)
@@ -20,6 +21,7 @@ public class ActiveContractViewModel : ViewModelBase
         PricePerUnit    = $"${contract.PricePerUnit:N2}";
         TotalPerTurn    = $"${contract.TotalPerTurn:N2}";
         TurnsRemaining  = $"{contract.TurnsRemaining} turns";
+        Strikes         = contract.Strikes > 0 ? $"{contract.Strikes} / 3" : "—";
         Status          = canFulfillThisTurn ? "On Track" : "At Risk";
     }
 }

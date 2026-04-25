@@ -171,10 +171,10 @@
                             </Style>
                         </dg:DataGrid.Styles>
                         <dg:DataGrid.Columns>
-                            <dg:DataGridTextColumn Header="Type"           Binding="{Binding Type}"          Width="60"/>
+                            <dg:DataGridTextColumn Header="Type"           Binding="{Binding Type}"          Width="80"/>
                             <dg:DataGridTextColumn Header="Resource"       Binding="{Binding Resource}"      Width="*"/>
                             <dg:DataGridTextColumn Header="Quantity"       Binding="{Binding Quantity}"      Width="80"  SortMemberPath="QuantityValue"/>
-                            <dg:DataGridTextColumn Header="Price / Unit"   Binding="{Binding PricePerUnit}"  Width="100" SortMemberPath="PricePerUnitValue"/>
+                            <dg:DataGridTextColumn Header="Price / Unit"   Binding="{Binding PricePerUnit}"  Width="120" SortMemberPath="PricePerUnitValue"/>
                             <dg:DataGridTextColumn Header="Total"          Binding="{Binding Total}"         Width="100" SortMemberPath="TotalValue"/>
                             <dg:DataGridTextColumn Header="Expires In" Binding="{Binding ExpiresIn}" Width="100" SortMemberPath="TurnsLeft"/>
                             <dg:DataGridTemplateColumn Width="80">
@@ -209,11 +209,11 @@
                                 </Style>
                             </dg:DataGrid.Styles>
                             <dg:DataGrid.Columns>
-                                <dg:DataGridTextColumn Header="Type"       Binding="{Binding Type}"            Width="60"/>
+                                <dg:DataGridTextColumn Header="Type"       Binding="{Binding Type}"            Width="80"/>
                                 <dg:DataGridTextColumn Header="Resource"   Binding="{Binding Resource}"        Width="*"/>
-                                <dg:DataGridTextColumn Header="Qty / Turn" Binding="{Binding QuantityPerTurn}" Width="90"/>
-                                <dg:DataGridTextColumn Header="Price / Unit" Binding="{Binding PricePerUnit}"  Width="100"/>
-                                <dg:DataGridTextColumn Header="Total / Turn" Binding="{Binding TotalPerTurn}"  Width="100"/>
+                                <dg:DataGridTextColumn Header="Qty / Turn" Binding="{Binding QuantityPerTurn}" Width="110"/>
+                                <dg:DataGridTextColumn Header="Price / Unit" Binding="{Binding PricePerUnit}"  Width="120"/>
+                                <dg:DataGridTextColumn Header="Total / Turn" Binding="{Binding TotalPerTurn}"  Width="120"/>
                                 <dg:DataGridTextColumn Header="Duration"   Binding="{Binding Duration}"        Width="90"/>
                                 <dg:DataGridTextColumn Header="Expires In" Binding="{Binding AvailableFor}"    Width="90"/>
                                 <dg:DataGridTemplateColumn Width="80">
@@ -245,6 +245,7 @@
                                 <dg:DataGridTextColumn Header="Price / Unit" Binding="{Binding PricePerUnit}"  Width="100"/>
                                 <dg:DataGridTextColumn Header="Total / Turn" Binding="{Binding TotalPerTurn}"  Width="100"/>
                                 <dg:DataGridTextColumn Header="Turns Left" Binding="{Binding TurnsRemaining}"  Width="90"/>
+                                <dg:DataGridTextColumn Header="Strikes"    Binding="{Binding Strikes}"         Width="80"/>
                                 <dg:DataGridTextColumn Header="Status"     Binding="{Binding Status}"          Width="90"/>
                             </dg:DataGrid.Columns>
                         </dg:DataGrid>

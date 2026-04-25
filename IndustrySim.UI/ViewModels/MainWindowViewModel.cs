@@ -107,14 +107,20 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void EndTurn()
     {
-        var depleted = _loop.ProcessTurn();
+        var events = _loop.ProcessTurn();
         RefreshState();
 
-        if (depleted.Count > 0)
+        var lines = new List<string>();
+
+        foreach (var mine in events.DepletedMines)
+            lines.Add($"{mine} has been depleted.");
+
+        foreach (var resource in events.CancelledContracts)
+            lines.Add($"{resource} contract cancelled after 3 strikes. Penalty deducted.");
+
+        if (lines.Count > 0)
         {
-            Notification    = depleted.Count == 1
-                ? $"{depleted[0]} has been depleted."
-                : string.Join('\n', depleted.Select(n => $"{n} has been depleted."));
+            Notification    = string.Join('\n', lines);
             HasNotification = true;
         }
         else
