@@ -1,3 +1,5 @@
+using IndustrySim.Core.Markets;
+
 namespace IndustrySim.Core.Game;
 
 /// <summary>
@@ -8,4 +10,5 @@ public class GameState
 {
     public int TurnNumber { get; set; }
     public Player Player { get; set; } = new();
+    public Market Market { get; set; } = new();
 }

@@ -1,4 +1,6 @@
 using IndustrySim.Core.Industries;
+using IndustrySim.Core.Markets;
+using IndustrySim.Core.Models;
 
 namespace IndustrySim.Core.Game;
 
@@ -8,6 +10,8 @@ namespace IndustrySim.Core.Game;
 /// </summary>
 public class GameLoop
 {
+    private readonly Random _rng = Random.Shared;
+
     public GameState State { get; }
 
     public GameLoop(GameState state) => State = state;
@@ -33,13 +37,53 @@ public class GameLoop
     }
 
     /// <summary>
+    /// Accepts a market offer on behalf of the player.
+    /// Sell offers (market sells): player pays and receives the resource.
+    /// Buy offers (market buys): player loses the resource and receives payment.
+    /// Returns false if the offer no longer exists or the player cannot fulfil it.
+    /// </summary>
+    public bool TryAcceptOffer(MarketOffer offer)
+    {
+        if (!State.Market.Offers.Remove(offer))
+            return false;
+
+        if (offer.Type == OfferType.Sell)
+        {
+            if (State.Player.Balance < offer.TotalPrice)
+            {
+                State.Market.Offers.Add(offer); // put it back
+                return false;
+            }
+
+            State.Player.Balance -= offer.TotalPrice;
+            State.Player.AddToInventory(new Resource(offer.ResourceName, offer.Quantity));
+        }
+        else // Buy — market buys from player
+        {
+            var available = State.Player.Inventory.GetValueOrDefault(offer.ResourceName);
+            if (available < offer.Quantity)
+            {
+                State.Market.Offers.Add(offer); // put it back
+                return false;
+            }
+
+            State.Player.Inventory[offer.ResourceName] = available - offer.Quantity;
+            State.Player.Balance += offer.TotalPrice;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Advances the game by one turn.
     /// </summary>
     public void ProcessTurn()
     {
         State.TurnNumber++;
 
-        // TODO: resolve market offers and contracts
+        // Expire stale offers and add new ones for this turn.
+        State.Market.GenerateOffers(_rng, State.TurnNumber);
+
         // TODO: process AI company turns
 
         // Mines produce each turn until their reserves are exhausted.
