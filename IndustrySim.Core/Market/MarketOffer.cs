@@ -8,8 +8,8 @@ public class MarketOffer
     public double Quantity { get; set; }
     public decimal PricePerUnit { get; set; }
 
-    /// <summary>The turn number on which this offer expires and is removed from the market.</summary>
-    public int ExpiresOnTurn { get; set; }
+    /// <summary>Turns remaining before this offer expires. Decremented each turn; removed at 0.</summary>
+    public int TurnsRemaining { get; set; }
 
     public decimal TotalPrice => (decimal)Quantity * PricePerUnit;
 }

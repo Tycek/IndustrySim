@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(dotnet sln:*)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(ls /c/Users/TycJa/source/repos/IndustrySim/*.sln)"
     ]
   }
 }

@@ -1,20 +1,196 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:IndustrySim.UI.ViewModels"
+        xmlns:conv="using:IndustrySim.UI.Converters"
+        xmlns:dg="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.DataGrid"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
         x:Class="IndustrySim.UI.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="IndustrySim.UI">
+        Title="IndustrySim"
+        Width="1000" Height="700" MinWidth="800" MinHeight="600">
+
+    <Window.Resources>
+        <conv:FulfillableToBrushConverter x:Key="FulfillableToBrushConverter"/>
+    </Window.Resources>
 
     <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <DockPanel>
 
+        <!-- Header: player name, balance, turn -->
+        <Border DockPanel.Dock="Top" Padding="12,8"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding PlayerName}"
+                           FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1" Text="{Binding BalanceText}"
+                           FontSize="14" VerticalAlignment="Center" Margin="0,0,24,0"/>
+                <TextBlock Grid.Column="2" Text="{Binding TurnText}"
+                           FontSize="14" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- Footer: end turn -->
+        <Border DockPanel.Dock="Bottom" Padding="12,8"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}">
+            <Button HorizontalAlignment="Right"
+                    Command="{Binding EndTurnCommand}"
+                    Content="End Turn"
+                    Padding="24,6"/>
+        </Border>
+
+        <!-- Depletion notification banner -->
+        <Border DockPanel.Dock="Top"
+                IsVisible="{Binding HasNotification}"
+                Background="#CC7A2500"
+                Padding="12,8">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding Notification}"
+                           Foreground="White" FontWeight="SemiBold"
+                           VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <Button Grid.Column="1" Content="✕"
+                        Command="{Binding DismissNotificationCommand}"
+                        Foreground="White" Background="Transparent"
+                        BorderThickness="0" Padding="8,0"
+                        VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- Main tabs -->
+        <TabControl>
+
+            <!-- Industries tab -->
+            <TabItem Header="Industries">
+                <Grid RowDefinitions="*,4,*" Margin="8">
+
+                    <!-- Owned industries -->
+                    <DockPanel Grid.Row="0">
+                        <TextBlock DockPanel.Dock="Top" Text="My Industries"
+                                   FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <dg:DataGrid ItemsSource="{Binding PlayerIndustries}"
+                                     AutoGenerateColumns="False" IsReadOnly="True"
+                                     CanUserResizeColumns="True" CanUserSortColumns="False"
+                                     GridLinesVisibility="Horizontal">
+                            <dg:DataGrid.Columns>
+                                <dg:DataGridTextColumn Header="Name"         Binding="{Binding Name}"        Width="*"/>
+                                <dg:DataGridTextColumn Header="Status"       Binding="{Binding Status}"      Width="*"/>
+                                <dg:DataGridTextColumn Header="Running Cost" Binding="{Binding RunningCost}" Width="120"/>
+                                <dg:DataGridTemplateColumn Width="80">
+                                    <dg:DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:OwnedIndustryViewModel">
+                                            <Button Command="{Binding CloseCommand}" Content="Close"
+                                                    HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
+                                        </DataTemplate>
+                                    </dg:DataGridTemplateColumn.CellTemplate>
+                                </dg:DataGridTemplateColumn>
+                            </dg:DataGrid.Columns>
+                        </dg:DataGrid>
+                    </DockPanel>
+
+                    <GridSplitter Grid.Row="1" ResizeDirection="Rows" HorizontalAlignment="Stretch"/>
+
+                    <!-- Build catalog -->
+                    <DockPanel Grid.Row="2">
+                        <TextBlock DockPanel.Dock="Top" Text="Build New Industry"
+                                   FontWeight="SemiBold" Margin="0,4,0,4"/>
+                        <dg:DataGrid ItemsSource="{Binding Catalog}"
+                                     AutoGenerateColumns="False" IsReadOnly="True"
+                                     CanUserResizeColumns="True" CanUserSortColumns="False"
+                                     GridLinesVisibility="Horizontal">
+                            <dg:DataGrid.Columns>
+                                <dg:DataGridTextColumn Header="Name"         Binding="{Binding Name}"        Width="*"/>
+                                <dg:DataGridTextColumn Header="Build Cost"   Binding="{Binding BuildCost}"   Width="110"/>
+                                <dg:DataGridTextColumn Header="Running Cost" Binding="{Binding RunningCost}" Width="120"/>
+                                <dg:DataGridTemplateColumn Width="80">
+                                    <dg:DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:CatalogIndustryViewModel">
+                                            <Button Command="{Binding BuildCommand}" Content="Build"
+                                                    HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
+                                        </DataTemplate>
+                                    </dg:DataGridTemplateColumn.CellTemplate>
+                                </dg:DataGridTemplateColumn>
+                            </dg:DataGrid.Columns>
+                        </dg:DataGrid>
+                    </DockPanel>
+
+                </Grid>
+            </TabItem>
+
+            <!-- Market tab -->
+            <TabItem Header="Market">
+                <DockPanel Margin="8">
+                    <TextBlock DockPanel.Dock="Top" Text="Market Offers"
+                               FontWeight="SemiBold" Margin="0,0,0,6"/>
+
+                    <!-- Filter bar -->
+                    <Grid DockPanel.Dock="Top"
+                          ColumnDefinitions="Auto,160,Auto,120"
+                          Margin="0,0,0,8">
+                        <TextBlock Grid.Column="0" Text="Resource:"
+                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox  Grid.Column="1" ItemsSource="{Binding MarketResourceOptions}"
+                                   SelectedItem="{Binding MarketResourceFilter}"
+                                   HorizontalAlignment="Stretch" Margin="0,0,12,0"/>
+                        <TextBlock Grid.Column="2" Text="Type:"
+                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox  Grid.Column="3" ItemsSource="{Binding MarketTypeOptions}"
+                                   SelectedItem="{Binding MarketTypeFilter}"
+                                   HorizontalAlignment="Stretch"/>
+                    </Grid>
+
+                    <dg:DataGrid ItemsSource="{Binding MarketOffers}"
+                                 AutoGenerateColumns="False" IsReadOnly="True"
+                                 CanUserResizeColumns="True" CanUserSortColumns="True"
+                                 GridLinesVisibility="Horizontal">
+                        <dg:DataGrid.Styles>
+                            <Style Selector="dg|DataGridRow" x:CompileBindings="False">
+                                <Setter Property="Background"
+                                        Value="{Binding CanFulfill, Converter={StaticResource FulfillableToBrushConverter}}"/>
+                            </Style>
+                        </dg:DataGrid.Styles>
+                        <dg:DataGrid.Columns>
+                            <dg:DataGridTextColumn Header="Type"           Binding="{Binding Type}"          Width="60"/>
+                            <dg:DataGridTextColumn Header="Resource"       Binding="{Binding Resource}"      Width="*"/>
+                            <dg:DataGridTextColumn Header="Quantity"       Binding="{Binding Quantity}"      Width="80"  SortMemberPath="QuantityValue"/>
+                            <dg:DataGridTextColumn Header="Price / Unit"   Binding="{Binding PricePerUnit}"  Width="100" SortMemberPath="PricePerUnitValue"/>
+                            <dg:DataGridTextColumn Header="Total"          Binding="{Binding Total}"         Width="100" SortMemberPath="TotalValue"/>
+                            <dg:DataGridTextColumn Header="Expires In" Binding="{Binding ExpiresIn}" Width="100" SortMemberPath="TurnsLeft"/>
+                            <dg:DataGridTemplateColumn Width="80">
+                                <dg:DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:MarketOfferViewModel">
+                                        <Button Command="{Binding AcceptCommand}" Content="Accept"
+                                                HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
+                                    </DataTemplate>
+                                </dg:DataGridTemplateColumn.CellTemplate>
+                            </dg:DataGridTemplateColumn>
+                        </dg:DataGrid.Columns>
+                    </dg:DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- Stockpile tab -->
+            <TabItem Header="Stockpile">
+                <DockPanel Margin="8">
+                    <TextBlock DockPanel.Dock="Top" Text="Stockpile"
+                               FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <dg:DataGrid ItemsSource="{Binding Stockpile}"
+                                 AutoGenerateColumns="False" IsReadOnly="True"
+                                 CanUserResizeColumns="True" CanUserSortColumns="False"
+                                 GridLinesVisibility="Horizontal">
+                        <dg:DataGrid.Columns>
+                            <dg:DataGridTextColumn Header="Resource" Binding="{Binding Resource}" Width="*"/>
+                            <dg:DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="120"/>
+                        </dg:DataGrid.Columns>
+                    </dg:DataGrid>
+                </DockPanel>
+            </TabItem>
+
+        </TabControl>
+    </DockPanel>
 </Window>

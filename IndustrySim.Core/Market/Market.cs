@@ -3,8 +3,8 @@ using IndustrySim.Core.Models;
 namespace IndustrySim.Core.Markets;
 
 /// <summary>
-/// Holds the active one-time market offers. Each turn, expired offers are removed and
-/// a random batch of new offers is added for random resources.
+/// Holds the active one-time market offers. Each turn, all offers are decremented and
+/// expired ones are removed, then a random batch of new offers is added.
 /// </summary>
 public class Market
 {
@@ -21,37 +21,39 @@ public class Market
     public List<MarketOffer> Offers { get; set; } = [];
 
     /// <summary>
-    /// Removes expired offers, then adds 2–5 new offers for randomly chosen resources
-    /// and types. Each new offer lasts 3–7 turns before expiring.
+    /// Decrements <see cref="MarketOffer.TurnsRemaining"/> on all offers, removes expired
+    /// ones, then adds 2–5 new offers for randomly chosen resources and types.
+    /// New offers last 3–7 turns.
     /// </summary>
-    public void GenerateOffers(Random rng, int currentTurn)
+    public void GenerateOffers(Random rng)
     {
-        Offers.RemoveAll(o => o.ExpiresOnTurn <= currentTurn);
+        foreach (var offer in Offers)
+            offer.TurnsRemaining--;
+
+        Offers.RemoveAll(o => o.TurnsRemaining <= 0);
 
         var newOfferCount = rng.Next(2, 6);
         for (var i = 0; i < newOfferCount; i++)
         {
-            var resource  = Resources[rng.Next(Resources.Length)];
-            var type      = rng.Next(2) == 0 ? OfferType.Sell : OfferType.Buy;
-            var lifespan  = rng.Next(3, 8); // expires in 3–7 turns
+            var resource = Resources[rng.Next(Resources.Length)];
+            var type     = rng.Next(2) == 0 ? OfferType.Sell : OfferType.Buy;
 
-            Offers.Add(MakeOffer(rng, type, resource, BasePrices[resource], currentTurn + lifespan));
+            Offers.Add(MakeOffer(rng, type, resource, BasePrices[resource]));
         }
     }
 
-    private static MarketOffer MakeOffer(
-        Random rng, OfferType type, string resource, decimal basePrice, int expiresOnTurn)
+    private static MarketOffer MakeOffer(Random rng, OfferType type, string resource, decimal basePrice)
     {
         var priceMultiplier = 0.8 + rng.NextDouble() * 0.4; // ±20 %
         var quantity        = rng.Next(1, 11) * 10;          // 10, 20, … 100
 
         return new MarketOffer
         {
-            Type          = type,
-            ResourceName  = resource,
-            Quantity      = quantity,
-            PricePerUnit  = Math.Round(basePrice * (decimal)priceMultiplier, 2),
-            ExpiresOnTurn = expiresOnTurn,
+            Type           = type,
+            ResourceName   = resource,
+            Quantity       = quantity,
+            PricePerUnit   = Math.Round(basePrice * (decimal)priceMultiplier, 2),
+            TurnsRemaining = rng.Next(3, 8),
         };
     }
 }

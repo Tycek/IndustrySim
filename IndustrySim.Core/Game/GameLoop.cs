@@ -22,6 +22,10 @@ public class GameLoop
         Player = new Player { Name = playerName, Balance = startingBalance }
     });
 
+    /// <summary>Removes a depleted or unwanted industry from the player's list.</summary>
+    public void RemoveIndustry(IIndustry industry) =>
+        State.Player.Industries.Remove(industry);
+
     /// <summary>
     /// Builds an industry for the player. Deducts <see cref="IIndustry.BuildCost"/> from
     /// the player's balance. Returns false if the player cannot afford it.
@@ -76,21 +80,40 @@ public class GameLoop
 
     /// <summary>
     /// Advances the game by one turn.
+    /// Returns the names of any mines that became depleted this turn.
     /// </summary>
-    public void ProcessTurn()
+    public IReadOnlyList<string> ProcessTurn()
     {
         State.TurnNumber++;
 
         // Expire stale offers and add new ones for this turn.
-        State.Market.GenerateOffers(_rng, State.TurnNumber);
+        State.Market.GenerateOffers(_rng);
 
         // TODO: process AI company turns
 
-        // Mines produce each turn until their reserves are exhausted.
-        foreach (var mine in State.Player.Industries.OfType<MineBase>().Where(m => m.IsOpen))
+        // Mines produce first (no inputs, so order doesn't matter between them).
+        // Track which mines were open before production so we can detect new depletions.
+        var openMines = State.Player.Industries.OfType<MineBase>().Where(m => m.IsOpen).ToList();
+        foreach (var mine in openMines)
         {
             foreach (var resource in mine.Process(State.Player.Inventory))
                 State.Player.AddToInventory(resource);
+        }
+
+        var depletedThisTurn = openMines.Where(m => !m.IsOpen).Select(m => m.Name).ToList();
+
+        // Processing industries consume from inventory then add their outputs.
+        foreach (var industry in State.Player.Industries.Where(i => i is not MineBase))
+        {
+            var produced = industry.Process(State.Player.Inventory);
+            if (produced.Count == 0) continue;
+
+            foreach (var input in industry.InputsRequired)
+                State.Player.Inventory[input.Name] =
+                    State.Player.Inventory.GetValueOrDefault(input.Name) - input.Quantity;
+
+            foreach (var output in produced)
+                State.Player.AddToInventory(output);
         }
 
         // Deduct running costs. Closed mines (Capacity = 0) are excluded.
@@ -100,5 +123,7 @@ public class GameLoop
                 continue;
             State.Player.Balance -= industry.RunningCost;
         }
+
+        return depletedThisTurn;
     }
 }
