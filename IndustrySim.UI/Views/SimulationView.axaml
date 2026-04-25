@@ -1,0 +1,112 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:IndustrySim.UI.ViewModels"
+             xmlns:dg="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.DataGrid"
+             x:Class="IndustrySim.UI.Views.SimulationView"
+             x:DataType="vm:SimulationViewModel">
+
+    <Grid ColumnDefinitions="260,1,*">
+
+        <!-- Config panel -->
+        <DockPanel Grid.Column="0" Margin="8" LastChildFill="True">
+
+            <Button DockPanel.Dock="Bottom"
+                    Command="{Binding RunSimulationCommand}"
+                    Content="Run Simulation"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Padding="0,8" Margin="0,8,0,0"/>
+
+            <ScrollViewer>
+                <StackPanel Spacing="12">
+
+                    <!-- Turn count -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Turns" FontWeight="SemiBold"/>
+                        <NumericUpDown Value="{Binding TurnCount}"
+                                       Minimum="1" Maximum="500" Increment="10"
+                                       FormatString="0"/>
+                    </StackPanel>
+
+                    <!-- Fixed prices -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Fixed Prices (per unit)" FontWeight="SemiBold"/>
+                        <Grid ColumnDefinitions="*,120" RowDefinitions="Auto,Auto,Auto,Auto" >
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Coal"
+                                       VerticalAlignment="Center" Margin="0,0,0,4"/>
+                            <NumericUpDown Grid.Row="0" Grid.Column="1"
+                                          Value="{Binding CoalPrice}"
+                                          Minimum="0" Increment="0.5" FormatString="N2" Margin="0,0,0,4"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Iron Ore"
+                                       VerticalAlignment="Center" Margin="0,0,0,4"/>
+                            <NumericUpDown Grid.Row="1" Grid.Column="1"
+                                          Value="{Binding IronOrePrice}"
+                                          Minimum="0" Increment="0.5" FormatString="N2" Margin="0,0,0,4"/>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Coal Coke"
+                                       VerticalAlignment="Center" Margin="0,0,0,4"/>
+                            <NumericUpDown Grid.Row="2" Grid.Column="1"
+                                          Value="{Binding CoalCokePrice}"
+                                          Minimum="0" Increment="0.5" FormatString="N2" Margin="0,0,0,4"/>
+
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="Steel Ingot"
+                                       VerticalAlignment="Center"/>
+                            <NumericUpDown Grid.Row="3" Grid.Column="1"
+                                          Value="{Binding SteelIngotPrice}"
+                                          Minimum="0" Increment="0.5" FormatString="N2"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Industries -->
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Industries" FontWeight="SemiBold"/>
+                        <ItemsControl ItemsSource="{Binding Industries}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SimulationIndustryOptionViewModel">
+                                    <CheckBox IsChecked="{Binding IsSelected}"
+                                              Content="{Binding Name}"
+                                              Margin="0,2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                </StackPanel>
+            </ScrollViewer>
+        </DockPanel>
+
+        <!-- Vertical separator -->
+        <Border Grid.Column="1"
+                Background="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"/>
+
+        <!-- Results panel -->
+        <DockPanel Grid.Column="2" Margin="8">
+
+            <!-- Summary bar -->
+            <Border DockPanel.Dock="Top"
+                    IsVisible="{Binding HasResults}"
+                    Padding="10,7" Margin="0,0,0,8"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                    CornerRadius="4">
+                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" FontSize="12"/>
+            </Border>
+
+            <dg:DataGrid ItemsSource="{Binding Results}"
+                         AutoGenerateColumns="False" IsReadOnly="True"
+                         CanUserResizeColumns="True" CanUserSortColumns="True"
+                         GridLinesVisibility="Horizontal">
+                <dg:DataGrid.Columns>
+                    <dg:DataGridTextColumn Header="Turn"    Binding="{Binding Turn}"    Width="55"  SortMemberPath="Turn"/>
+                    <dg:DataGridTextColumn Header="Revenue" Binding="{Binding Revenue}" Width="*"   SortMemberPath="NetValue"/>
+                    <dg:DataGridTextColumn Header="Costs"   Binding="{Binding Costs}"   Width="*"/>
+                    <dg:DataGridTextColumn Header="Net"     Binding="{Binding Net}"     Width="*"   SortMemberPath="NetValue"/>
+                    <dg:DataGridTextColumn Header="Balance" Binding="{Binding Balance}" Width="*"   SortMemberPath="BalanceValue"/>
+                </dg:DataGrid.Columns>
+            </dg:DataGrid>
+
+        </DockPanel>
+
+    </Grid>
+</UserControl>

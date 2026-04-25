@@ -35,6 +35,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<MarketOfferViewModel>    MarketOffers     { get; } = [];
     public ObservableCollection<StockpileEntryViewModel> Stockpile        { get; } = [];
     public IReadOnlyList<CatalogIndustryViewModel>       Catalog          { get; }
+    public SimulationViewModel                           Simulation       { get; } = new();
 
     public MainWindowViewModel()
     {

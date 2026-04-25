@@ -207,6 +207,11 @@
                 </DockPanel>
             </TabItem>
 
+            <!-- Simulation tab -->
+            <TabItem Header="Simulation">
+                <ContentControl Content="{Binding Simulation}"/>
+            </TabItem>
+
         </TabControl>
     </DockPanel>
 </Window>
