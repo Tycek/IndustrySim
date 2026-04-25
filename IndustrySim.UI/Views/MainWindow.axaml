@@ -190,6 +190,69 @@
                 </DockPanel>
             </TabItem>
 
+            <!-- Contracts tab -->
+            <TabItem Header="Contracts">
+                <Grid RowDefinitions="*,4,*" Margin="8">
+
+                    <!-- Available contracts -->
+                    <DockPanel Grid.Row="0">
+                        <TextBlock DockPanel.Dock="Top" Text="Available Contracts"
+                                   FontWeight="SemiBold" Margin="0,0,0,4"/>
+                        <dg:DataGrid ItemsSource="{Binding AvailableContracts}"
+                                     AutoGenerateColumns="False" IsReadOnly="True"
+                                     CanUserResizeColumns="True" CanUserSortColumns="False"
+                                     GridLinesVisibility="Horizontal">
+                            <dg:DataGrid.Styles>
+                                <Style Selector="dg|DataGridRow" x:CompileBindings="False">
+                                    <Setter Property="Background"
+                                            Value="{Binding CanFulfill, Converter={StaticResource FulfillableToBrushConverter}}"/>
+                                </Style>
+                            </dg:DataGrid.Styles>
+                            <dg:DataGrid.Columns>
+                                <dg:DataGridTextColumn Header="Type"       Binding="{Binding Type}"            Width="60"/>
+                                <dg:DataGridTextColumn Header="Resource"   Binding="{Binding Resource}"        Width="*"/>
+                                <dg:DataGridTextColumn Header="Qty / Turn" Binding="{Binding QuantityPerTurn}" Width="90"/>
+                                <dg:DataGridTextColumn Header="Price / Unit" Binding="{Binding PricePerUnit}"  Width="100"/>
+                                <dg:DataGridTextColumn Header="Total / Turn" Binding="{Binding TotalPerTurn}"  Width="100"/>
+                                <dg:DataGridTextColumn Header="Duration"   Binding="{Binding Duration}"        Width="90"/>
+                                <dg:DataGridTextColumn Header="Expires In" Binding="{Binding AvailableFor}"    Width="90"/>
+                                <dg:DataGridTemplateColumn Width="80">
+                                    <dg:DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:AvailableContractViewModel">
+                                            <Button Command="{Binding AcceptCommand}" Content="Accept"
+                                                    HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
+                                        </DataTemplate>
+                                    </dg:DataGridTemplateColumn.CellTemplate>
+                                </dg:DataGridTemplateColumn>
+                            </dg:DataGrid.Columns>
+                        </dg:DataGrid>
+                    </DockPanel>
+
+                    <GridSplitter Grid.Row="1" ResizeDirection="Rows" HorizontalAlignment="Stretch"/>
+
+                    <!-- Active contracts -->
+                    <DockPanel Grid.Row="2">
+                        <TextBlock DockPanel.Dock="Top" Text="Active Contracts"
+                                   FontWeight="SemiBold" Margin="0,4,0,4"/>
+                        <dg:DataGrid ItemsSource="{Binding ActiveContracts}"
+                                     AutoGenerateColumns="False" IsReadOnly="True"
+                                     CanUserResizeColumns="True" CanUserSortColumns="False"
+                                     GridLinesVisibility="Horizontal">
+                            <dg:DataGrid.Columns>
+                                <dg:DataGridTextColumn Header="Type"       Binding="{Binding Type}"            Width="60"/>
+                                <dg:DataGridTextColumn Header="Resource"   Binding="{Binding Resource}"        Width="*"/>
+                                <dg:DataGridTextColumn Header="Qty / Turn" Binding="{Binding QuantityPerTurn}" Width="90"/>
+                                <dg:DataGridTextColumn Header="Price / Unit" Binding="{Binding PricePerUnit}"  Width="100"/>
+                                <dg:DataGridTextColumn Header="Total / Turn" Binding="{Binding TotalPerTurn}"  Width="100"/>
+                                <dg:DataGridTextColumn Header="Turns Left" Binding="{Binding TurnsRemaining}"  Width="90"/>
+                                <dg:DataGridTextColumn Header="Status"     Binding="{Binding Status}"          Width="90"/>
+                            </dg:DataGrid.Columns>
+                        </dg:DataGrid>
+                    </DockPanel>
+
+                </Grid>
+            </TabItem>
+
             <!-- Stockpile tab -->
             <TabItem Header="Stockpile">
                 <DockPanel Margin="8">
@@ -205,6 +268,11 @@
                         </dg:DataGrid.Columns>
                     </dg:DataGrid>
                 </DockPanel>
+            </TabItem>
+
+            <!-- Summary tab -->
+            <TabItem Header="Summary">
+                <ContentControl Content="{Binding Summary}"/>
             </TabItem>
 
             <!-- Simulation tab -->

@@ -31,11 +31,14 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public IReadOnlyList<string> MarketTypeOptions { get; } = ["All", "Buy", "Sell"];
 
-    public ObservableCollection<OwnedIndustryViewModel>  PlayerIndustries { get; } = [];
-    public ObservableCollection<MarketOfferViewModel>    MarketOffers     { get; } = [];
-    public ObservableCollection<StockpileEntryViewModel> Stockpile        { get; } = [];
-    public IReadOnlyList<CatalogIndustryViewModel>       Catalog          { get; }
-    public SimulationViewModel                           Simulation       { get; } = new();
+    public ObservableCollection<OwnedIndustryViewModel>      PlayerIndustries    { get; } = [];
+    public ObservableCollection<MarketOfferViewModel>        MarketOffers        { get; } = [];
+    public ObservableCollection<StockpileEntryViewModel>     Stockpile           { get; } = [];
+    public ObservableCollection<AvailableContractViewModel>  AvailableContracts  { get; } = [];
+    public ObservableCollection<ActiveContractViewModel>     ActiveContracts     { get; } = [];
+    public IReadOnlyList<CatalogIndustryViewModel>           Catalog             { get; }
+    public SummaryViewModel                                  Summary             { get; } = new();
+    public SimulationViewModel                               Simulation          { get; } = new();
 
     public MainWindowViewModel()
     {
@@ -88,6 +91,12 @@ public partial class MainWindowViewModel : ViewModelBase
         RefreshState();
     }
 
+    private void AcceptContract(Contract contract)
+    {
+        _loop.TryAcceptContract(contract);
+        RefreshState();
+    }
+
     [RelayCommand]
     private void DismissNotification()
     {
@@ -136,7 +145,27 @@ public partial class MainWindowViewModel : ViewModelBase
         ApplyMarketFilter();
 
         Stockpile.Clear();
-        foreach (var (resource, qty) in _loop.State.Player.Inventory.OrderBy(kv => kv.Key))
+        foreach (var (resource, qty) in _loop.State.Player.Inventory.OrderBy(kv => kv.Key).Where(kv => kv.Value > 0))
             Stockpile.Add(new StockpileEntryViewModel(resource, qty));
+
+        AvailableContracts.Clear();
+        foreach (var contract in _loop.State.Market.AvailableContracts)
+        {
+            var canFulfill = contract.Type == OfferType.Buy
+                ? player.Inventory.GetValueOrDefault(contract.ResourceName) >= contract.QuantityPerTurn
+                : player.Balance >= contract.TotalPerTurn;
+            AvailableContracts.Add(new AvailableContractViewModel(contract, canFulfill, AcceptContract));
+        }
+
+        ActiveContracts.Clear();
+        foreach (var contract in _loop.State.Player.ActiveContracts)
+        {
+            var canFulfill = contract.Type == OfferType.Buy
+                ? player.Inventory.GetValueOrDefault(contract.ResourceName) >= contract.QuantityPerTurn
+                : player.Balance >= contract.TotalPerTurn;
+            ActiveContracts.Add(new ActiveContractViewModel(contract, canFulfill));
+        }
+
+        Summary.Refresh(player);
     }
 }

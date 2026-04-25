@@ -1,4 +1,5 @@
 using IndustrySim.Core.Industries;
+using IndustrySim.Core.Markets;
 using IndustrySim.Core.Models;
 
 namespace IndustrySim.Core.Game;
@@ -13,6 +14,8 @@ public class Player
     public List<IIndustry> Industries { get; set; } = [];
 
     public Dictionary<string, double> Inventory { get; set; } = [];
+
+    public List<Contract> ActiveContracts { get; set; } = [];
 
     public void AddToInventory(Resource resource) =>
         Inventory[resource.Name] = Inventory.GetValueOrDefault(resource.Name) + resource.Quantity;

@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:IndustrySim.UI.ViewModels"
+             xmlns:dg="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.DataGrid"
+             x:Class="IndustrySim.UI.Views.SummaryView"
+             x:DataType="vm:SummaryViewModel">
+
+    <Grid RowDefinitions="*,8,Auto" Margin="8">
+
+        <!-- Products per turn -->
+        <DockPanel Grid.Row="0">
+            <TextBlock DockPanel.Dock="Top" Text="Production per Turn"
+                       FontWeight="SemiBold" Margin="0,0,0,4"/>
+            <TextBlock DockPanel.Dock="Top"
+                       Text="Based on current industries at full operation. Contract use shows resources delivered to active Buy contracts."
+                       FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,0,0,6"/>
+            <dg:DataGrid ItemsSource="{Binding Products}"
+                         AutoGenerateColumns="False" IsReadOnly="True"
+                         CanUserResizeColumns="True" CanUserSortColumns="True"
+                         GridLinesVisibility="Horizontal">
+                <dg:DataGrid.Columns>
+                    <dg:DataGridTextColumn Header="Resource"               Binding="{Binding Resource}"             Width="*"/>
+                    <dg:DataGridTextColumn Header="Produced / Turn"        Binding="{Binding Produced}"             Width="130"/>
+                    <dg:DataGridTextColumn Header="Industry Use"           Binding="{Binding IndustryUse}"          Width="110"/>
+                    <dg:DataGridTextColumn Header="Delivered to Contracts" Binding="{Binding DeliveredToContracts}" Width="160"/>
+                    <dg:DataGridTextColumn Header="Received from Contracts" Binding="{Binding ReceivedFromContracts}" Width="170"/>
+                    <dg:DataGridTextColumn Header="Net / Turn"             Binding="{Binding Net}"                  Width="100" SortMemberPath="NetValue"/>
+                </dg:DataGrid.Columns>
+            </dg:DataGrid>
+        </DockPanel>
+
+        <!-- Finances per turn -->
+        <DockPanel Grid.Row="2">
+            <TextBlock DockPanel.Dock="Top" Text="Finances per Turn"
+                       FontWeight="SemiBold" Margin="0,0,0,4"/>
+            <dg:DataGrid ItemsSource="{Binding Finances}"
+                         AutoGenerateColumns="False" IsReadOnly="True"
+                         CanUserResizeColumns="True" CanUserSortColumns="False"
+                         GridLinesVisibility="Horizontal"
+                         MaxHeight="160">
+                <dg:DataGrid.Styles>
+                    <Style Selector="dg|DataGridRow" x:CompileBindings="False">
+                        <Setter Property="FontWeight"
+                                Value="{Binding IsTotal, Converter={x:Static vm:BoolToFontWeightConverter.Instance}}"/>
+                    </Style>
+                </dg:DataGrid.Styles>
+                <dg:DataGrid.Columns>
+                    <dg:DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="*"/>
+                    <dg:DataGridTextColumn Header="Per Turn"  Binding="{Binding PerTurn}"  Width="120"/>
+                </dg:DataGrid.Columns>
+            </dg:DataGrid>
+        </DockPanel>
+
+    </Grid>
+</UserControl>

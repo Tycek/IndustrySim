@@ -27,6 +27,21 @@ public class GameLoop
         State.Player.Industries.Remove(industry);
 
     /// <summary>
+    /// Accepts a contract offer. Moves it from the market's available list to the player's
+    /// active contracts and resets <see cref="Contract.TurnsRemaining"/> to the full duration.
+    /// Returns false if the contract is no longer available.
+    /// </summary>
+    public bool TryAcceptContract(Contract contract)
+    {
+        if (!State.Market.AvailableContracts.Remove(contract))
+            return false;
+
+        contract.TurnsRemaining = contract.DurationTurns;
+        State.Player.ActiveContracts.Add(contract);
+        return true;
+    }
+
+    /// <summary>
     /// Builds an industry for the player. Deducts <see cref="IIndustry.BuildCost"/> from
     /// the player's balance. Returns false if the player cannot afford it.
     /// </summary>
@@ -115,6 +130,32 @@ public class GameLoop
             foreach (var output in produced)
                 State.Player.AddToInventory(output);
         }
+
+        // Execute active contracts. Skip (no penalty) if the player cannot fulfil this turn.
+        foreach (var contract in State.Player.ActiveContracts.ToList())
+        {
+            if (contract.Type == OfferType.Sell) // market sells to player — player pays
+            {
+                if (State.Player.Balance >= contract.TotalPerTurn)
+                {
+                    State.Player.Balance -= contract.TotalPerTurn;
+                    State.Player.AddToInventory(new Resource(contract.ResourceName, contract.QuantityPerTurn));
+                }
+            }
+            else // Buy — market buys from player — player delivers resources
+            {
+                var available = State.Player.Inventory.GetValueOrDefault(contract.ResourceName);
+                if (available >= contract.QuantityPerTurn)
+                {
+                    State.Player.Inventory[contract.ResourceName] = available - contract.QuantityPerTurn;
+                    State.Player.Balance += contract.TotalPerTurn;
+                }
+            }
+
+            contract.TurnsRemaining--;
+        }
+
+        State.Player.ActiveContracts.RemoveAll(c => c.TurnsRemaining <= 0);
 
         // Deduct running costs. Closed mines (Capacity = 0) are excluded.
         foreach (var industry in State.Player.Industries)
