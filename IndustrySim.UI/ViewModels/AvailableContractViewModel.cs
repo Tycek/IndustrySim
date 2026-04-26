@@ -15,14 +15,20 @@ public class AvailableContractViewModel : ViewModelBase
     public string TotalPerTurn    => $"${_contract.TotalPerTurn:N2}";
     public string Duration        => $"{_contract.DurationTurns} turns";
     public string AvailableFor    => $"{_contract.TurnsAvailable} turns";
+    public string Source          => _contract.Source;
     public bool   CanFulfill      { get; }
+    public bool   IsPlayerOwned   { get; }
 
     public IRelayCommand AcceptCommand { get; }
+    public IRelayCommand CancelCommand { get; }
 
-    public AvailableContractViewModel(Contract contract, bool canFulfill, Action<Contract> onAccept)
+    public AvailableContractViewModel(Contract contract, bool canFulfill, bool isPlayerOwned,
+        Action<Contract> onAccept, Action<Contract> onCancel)
     {
-        _contract      = contract;
-        CanFulfill     = canFulfill;
-        AcceptCommand  = new RelayCommand(() => onAccept(contract));
+        _contract     = contract;
+        CanFulfill    = canFulfill;
+        IsPlayerOwned = isPlayerOwned;
+        AcceptCommand = new RelayCommand(() => onAccept(contract), () => !isPlayerOwned);
+        CancelCommand = new RelayCommand(() => onCancel(contract), () => isPlayerOwned);
     }
 }

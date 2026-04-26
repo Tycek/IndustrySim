@@ -4,7 +4,7 @@ using IndustrySim.Core.Models;
 
 namespace IndustrySim.Core.Game;
 
-public class Player
+public class Player : IMarketParticipant
 {
     public string Name { get; set; } = string.Empty;
     public decimal Balance { get; set; }

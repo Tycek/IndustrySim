@@ -12,6 +12,7 @@ public class ActiveContractViewModel : ViewModelBase
     public string TurnsRemaining  { get; }
     public string Strikes         { get; }
     public string Status          { get; }
+    public string Source          { get; }
 
     public ActiveContractViewModel(Contract contract, bool canFulfillThisTurn)
     {
@@ -23,5 +24,6 @@ public class ActiveContractViewModel : ViewModelBase
         TurnsRemaining  = $"{contract.TurnsRemaining} turns";
         Strikes         = contract.Strikes > 0 ? $"{contract.Strikes} / 3" : "—";
         Status          = canFulfillThisTurn ? "On Track" : "At Risk";
+        Source          = contract.Source;
     }
 }

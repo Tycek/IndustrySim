@@ -58,3 +58,6 @@ nunit-*.xml
 
 *.vsidx
 .vs
+
+.claude/*
+/IndustrySim.Core/.claude/settings.local.json

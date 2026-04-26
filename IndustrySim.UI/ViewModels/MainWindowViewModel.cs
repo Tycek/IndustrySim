@@ -16,33 +16,41 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly GameLoop _loop;
     private readonly List<MarketOfferViewModel> _rawMarketOffers = [];
 
-    [ObservableProperty] private string _playerName       = string.Empty;
-    [ObservableProperty] private string _balanceText      = string.Empty;
-    [ObservableProperty] private string _turnText         = string.Empty;
-    [ObservableProperty] private string _notification     = string.Empty;
-    [ObservableProperty] private bool   _hasNotification  = false;
+    [ObservableProperty] private string _playerName      = string.Empty;
+    [ObservableProperty] private string _balanceText     = string.Empty;
+    [ObservableProperty] private string _turnText        = string.Empty;
+    [ObservableProperty] private string _notification    = string.Empty;
+    [ObservableProperty] private bool   _hasNotification = false;
 
     // Market filters
     [ObservableProperty] private string _marketResourceFilter = "All";
     [ObservableProperty] private string _marketTypeFilter     = "All";
+    [ObservableProperty] private string _marketSourceFilter   = "All";
 
     public IReadOnlyList<string> MarketResourceOptions { get; } =
         ["All", ResourceNames.Coal, ResourceNames.IronOre, ResourceNames.CoalCoke, ResourceNames.SteelIngot];
 
-    public IReadOnlyList<string> MarketTypeOptions { get; } = ["All", "Buy", "Sell"];
+    public IReadOnlyList<string> MarketTypeOptions   { get; } = ["All", "Buy", "Sell"];
+    public IReadOnlyList<string> MarketSourceOptions { get; } = ["All", "Market", "AI Company", "My Offers"];
 
-    public ObservableCollection<OwnedIndustryViewModel>      PlayerIndustries    { get; } = [];
-    public ObservableCollection<MarketOfferViewModel>        MarketOffers        { get; } = [];
-    public ObservableCollection<StockpileEntryViewModel>     Stockpile           { get; } = [];
-    public ObservableCollection<AvailableContractViewModel>  AvailableContracts  { get; } = [];
-    public ObservableCollection<ActiveContractViewModel>     ActiveContracts     { get; } = [];
-    public IReadOnlyList<CatalogIndustryViewModel>           Catalog             { get; }
-    public SummaryViewModel                                  Summary             { get; } = new();
-    public SimulationViewModel                               Simulation          { get; } = new();
+    public ObservableCollection<OwnedIndustryViewModel>      PlayerIndustries   { get; } = [];
+    public ObservableCollection<MarketOfferViewModel>        MarketOffers       { get; } = [];
+    public ObservableCollection<StockpileEntryViewModel>     Stockpile          { get; } = [];
+    public ObservableCollection<AvailableContractViewModel>  AvailableContracts { get; } = [];
+    public ObservableCollection<ActiveContractViewModel>     ActiveContracts    { get; } = [];
+    public ObservableCollection<AiCompanyViewModel>          AiCompanies        { get; } = [];
+    public IReadOnlyList<CatalogIndustryViewModel>           Catalog            { get; }
+    public SummaryViewModel                                  Summary            { get; } = new();
+    public SimulationViewModel                               Simulation         { get; } = new();
+    public NewOfferViewModel                                 NewOffer           { get; }
+    public NewContractViewModel                              NewContract        { get; }
 
     public MainWindowViewModel()
     {
         _loop = GameLoop.StartNew("Player 1");
+
+        NewOffer    = new NewOfferViewModel(PostOffer);
+        NewContract = new NewContractViewModel(PostContract);
 
         Catalog =
         [
@@ -57,9 +65,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnMarketResourceFilterChanged(string value) => ApplyMarketFilter();
     partial void OnMarketTypeFilterChanged(string value)     => ApplyMarketFilter();
+    partial void OnMarketSourceFilterChanged(string value)   => ApplyMarketFilter();
 
     private void ApplyMarketFilter()
     {
+        var playerName = _loop.State.Player.Name;
         IEnumerable<MarketOfferViewModel> view = _rawMarketOffers;
 
         if (MarketResourceFilter != "All")
@@ -68,10 +78,20 @@ public partial class MainWindowViewModel : ViewModelBase
         if (MarketTypeFilter != "All")
             view = view.Where(o => o.Type == MarketTypeFilter);
 
+        view = MarketSourceFilter switch
+        {
+            "Market"     => view.Where(o => o.Source == "Market"),
+            "AI Company" => view.Where(o => o.Source != "Market" && o.Source != playerName),
+            "My Offers"  => view.Where(o => o.Source == playerName),
+            _            => view,
+        };
+
         MarketOffers.Clear();
         foreach (var offer in view)
             MarketOffers.Add(offer);
     }
+
+    // ── Player actions ───────────────────────────────────────────────────────
 
     private void Build(IIndustry industry)
     {
@@ -91,9 +111,34 @@ public partial class MainWindowViewModel : ViewModelBase
         RefreshState();
     }
 
+    private void CancelOffer(MarketOffer offer)
+    {
+        _loop.TryCancelOffer(offer);
+        RefreshState();
+    }
+
+    private bool PostOffer(OfferType type, string resource, double qty, decimal price, int turns)
+    {
+        var ok = _loop.TryPostOffer(type, resource, qty, price, turns);
+        RefreshState();
+        return ok;
+    }
+
     private void AcceptContract(Contract contract)
     {
         _loop.TryAcceptContract(contract);
+        RefreshState();
+    }
+
+    private void CancelContract(Contract contract)
+    {
+        _loop.TryCancelContract(contract);
+        RefreshState();
+    }
+
+    private void PostContract(OfferType type, string resource, double qty, decimal price, int duration)
+    {
+        _loop.PostContract(type, resource, qty, price, duration);
         RefreshState();
     }
 
@@ -118,6 +163,9 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var resource in events.CancelledContracts)
             lines.Add($"{resource} contract cancelled after 3 strikes. Penalty deducted.");
 
+        foreach (var company in events.NewAiCompanies)
+            lines.Add($"{company} has entered the market as a new competitor.");
+
         if (lines.Count > 0)
         {
             Notification    = string.Join('\n', lines);
@@ -131,27 +179,30 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void RefreshState()
     {
-        PlayerName  = _loop.State.Player.Name;
-        BalanceText = $"${_loop.State.Player.Balance:N0}";
+        var player     = _loop.State.Player;
+        var playerName = player.Name;
+
+        PlayerName  = playerName;
+        BalanceText = $"${player.Balance:N0}";
         TurnText    = $"Turn {_loop.State.TurnNumber}";
 
         PlayerIndustries.Clear();
-        foreach (var industry in _loop.State.Player.Industries)
+        foreach (var industry in player.Industries)
             PlayerIndustries.Add(new OwnedIndustryViewModel(industry, CloseIndustry));
 
         _rawMarketOffers.Clear();
-        var player = _loop.State.Player;
         foreach (var offer in _loop.State.Market.Offers)
         {
             var canFulfill = offer.Type == OfferType.Buy
                 ? player.Inventory.GetValueOrDefault(offer.ResourceName) >= offer.Quantity
                 : player.Balance >= offer.TotalPrice;
-            _rawMarketOffers.Add(new MarketOfferViewModel(offer, canFulfill, AcceptOffer));
+            var isPlayerOwned = offer.Source == playerName;
+            _rawMarketOffers.Add(new MarketOfferViewModel(offer, canFulfill, isPlayerOwned, AcceptOffer, CancelOffer));
         }
         ApplyMarketFilter();
 
         Stockpile.Clear();
-        foreach (var (resource, qty) in _loop.State.Player.Inventory.OrderBy(kv => kv.Key).Where(kv => kv.Value > 0))
+        foreach (var (resource, qty) in player.Inventory.OrderBy(kv => kv.Key).Where(kv => kv.Value > 0))
             Stockpile.Add(new StockpileEntryViewModel(resource, qty));
 
         AvailableContracts.Clear();
@@ -160,17 +211,22 @@ public partial class MainWindowViewModel : ViewModelBase
             var canFulfill = contract.Type == OfferType.Buy
                 ? player.Inventory.GetValueOrDefault(contract.ResourceName) >= contract.QuantityPerTurn
                 : player.Balance >= contract.TotalPerTurn;
-            AvailableContracts.Add(new AvailableContractViewModel(contract, canFulfill, AcceptContract));
+            var isPlayerOwned = contract.Source == playerName;
+            AvailableContracts.Add(new AvailableContractViewModel(contract, canFulfill, isPlayerOwned, AcceptContract, CancelContract));
         }
 
         ActiveContracts.Clear();
-        foreach (var contract in _loop.State.Player.ActiveContracts)
+        foreach (var contract in player.ActiveContracts)
         {
             var canFulfill = contract.Type == OfferType.Buy
                 ? player.Inventory.GetValueOrDefault(contract.ResourceName) >= contract.QuantityPerTurn
                 : player.Balance >= contract.TotalPerTurn;
             ActiveContracts.Add(new ActiveContractViewModel(contract, canFulfill));
         }
+
+        AiCompanies.Clear();
+        foreach (var company in _loop.State.AiCompanies)
+            AiCompanies.Add(new AiCompanyViewModel(company));
 
         Summary.Refresh(player);
     }

@@ -1,3 +1,4 @@
+using IndustrySim.Core.AiCompanies;
 using IndustrySim.Core.Markets;
 
 namespace IndustrySim.Core.Game;
@@ -11,4 +12,5 @@ public class GameState
     public int TurnNumber { get; set; }
     public Player Player { get; set; } = new();
     public Market Market { get; set; } = new();
+    public List<AiCompany> AiCompanies { get; set; } = [];
 }

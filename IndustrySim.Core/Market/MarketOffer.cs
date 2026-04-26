@@ -11,5 +11,8 @@ public class MarketOffer
     /// <summary>Turns remaining before this offer expires. Decremented each turn; removed at 0.</summary>
     public int TurnsRemaining { get; set; }
 
+    /// <summary>"Market" for game-generated offers; the company name for AI-posted offers.</summary>
+    public string Source { get; set; } = "Market";
+
     public decimal TotalPrice => (decimal)Quantity * PricePerUnit;
 }

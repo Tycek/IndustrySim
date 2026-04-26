@@ -8,7 +8,7 @@ namespace IndustrySim.Core.Markets;
 /// </summary>
 public class Market
 {
-    private static readonly Dictionary<string, decimal> BasePrices = new()
+    public static readonly IReadOnlyDictionary<string, decimal> BasePrices = new Dictionary<string, decimal>
     {
         [ResourceNames.Coal]       = 5m,
         [ResourceNames.IronOre]    = 8m,
@@ -26,12 +26,14 @@ public class Market
     /// ones, then adds 2–5 new offers for randomly chosen resources and types.
     /// Also ticks available contracts and occasionally generates a new one.
     /// New offers last 3–7 turns.
+    /// Returns the non-Market offers that expired this tick so callers can refund pre-committed funds.
     /// </summary>
-    public void GenerateOffers(Random rng)
+    public IReadOnlyList<MarketOffer> GenerateOffers(Random rng)
     {
         // One-time offers
         foreach (var offer in Offers)
             offer.TurnsRemaining--;
+        var expired = Offers.Where(o => o.TurnsRemaining <= 0 && o.Source != "Market").ToList();
         Offers.RemoveAll(o => o.TurnsRemaining <= 0);
 
         var newOfferCount = rng.Next(2, 6);
@@ -53,6 +55,8 @@ public class Market
             var type     = rng.Next(2) == 0 ? OfferType.Sell : OfferType.Buy;
             AvailableContracts.Add(MakeContract(rng, type, resource, BasePrices[resource]));
         }
+
+        return expired;
     }
 
     private static MarketOffer MakeOffer(Random rng, OfferType type, string resource, decimal basePrice)
