@@ -349,7 +349,9 @@ public class GameLoop
             State.Player.Balance -= industry.RunningCost;
         }
 
-        return new TurnEvents(depletedThisTurn, cancelledContracts, newAiCompanies);
+        var bankruptCompanies = DissolveInsolventAiCompanies(participants);
+
+        return new TurnEvents(depletedThisTurn, cancelledContracts, newAiCompanies, bankruptCompanies);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -386,5 +388,47 @@ public class GameLoop
         if (contract.Source == "Market") return;
         if (participants.TryGetValue(contract.Source, out var counterparty))
             counterparty.ActiveContracts.RemoveAll(c => c.OriginalContractId == contract.Id);
+    }
+
+    /// <summary>
+    /// Dissolves AI companies whose balance has fallen below the insolvency threshold
+    /// (the greater of 3× monthly running costs or $500). Cancels all their market
+    /// presence and removes any active contracts they hold with other participants.
+    /// No penalty is charged to the player or counterparties — the company is simply gone.
+    /// </summary>
+    private List<string> DissolveInsolventAiCompanies(
+        IReadOnlyDictionary<string, IMarketParticipant> participants)
+    {
+        var dissolved = new List<string>();
+
+        foreach (var ai in State.AiCompanies.ToList())
+        {
+            var runningCosts = ai.Industries
+                .Where(i => i is not MineBase mine || mine.IsOpen)
+                .Sum(i => i.RunningCost);
+            var threshold = -Math.Max(runningCosts * 3, 500m);
+
+            if (ai.Balance > threshold) continue;
+
+            // Remove all market offers posted by this AI (pre-committed resources/money forfeited).
+            State.Market.Offers.RemoveAll(o => o.Source == ai.Name);
+
+            // Remove all available contracts posted by this AI.
+            State.Market.AvailableContracts.RemoveAll(c => c.Source == ai.Name);
+
+            // Remove all active contracts referencing this AI from every other participant.
+            // This covers: (a) contracts the AI posted that others accepted (Source == ai.Name),
+            // and (b) mirrors the AI holds that belong to the other participant's original contract.
+            foreach (var (name, participant) in participants)
+            {
+                if (name == ai.Name) continue;
+                participant.ActiveContracts.RemoveAll(c => c.Source == ai.Name);
+            }
+
+            State.AiCompanies.Remove(ai);
+            dissolved.Add(ai.Name);
+        }
+
+        return dissolved;
     }
 }

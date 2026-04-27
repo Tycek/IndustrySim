@@ -166,6 +166,9 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var company in events.NewAiCompanies)
             lines.Add($"{company} has entered the market as a new competitor.");
 
+        foreach (var company in events.BankruptAiCompanies)
+            lines.Add($"{company} has gone bankrupt and left the market.");
+
         if (lines.Count > 0)
         {
             Notification    = string.Join('\n', lines);

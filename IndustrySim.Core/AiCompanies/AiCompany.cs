@@ -35,6 +35,7 @@ public class AiCompany : IMarketParticipant
                 AddToInventory(resource);
 
         var depletedThisTurn = openMines.Where(m => !m.IsOpen).Select(m => m.Name).ToList();
+        Industries.RemoveAll(i => i is MineBase mine && !mine.IsOpen);
 
         // Processing industries consume inputs then produce.
         foreach (var industry in Industries.Where(i => i is not MineBase))

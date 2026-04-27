@@ -4,4 +4,5 @@ namespace IndustrySim.Core.Game;
 public record TurnEvents(
     IReadOnlyList<string> DepletedMines,
     IReadOnlyList<string> CancelledContracts,
-    IReadOnlyList<string> NewAiCompanies);
+    IReadOnlyList<string> NewAiCompanies,
+    IReadOnlyList<string> BankruptAiCompanies);
