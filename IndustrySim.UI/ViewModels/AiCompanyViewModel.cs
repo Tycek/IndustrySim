@@ -8,29 +8,41 @@ namespace IndustrySim.UI.ViewModels;
 
 public class AiCompanyViewModel : ViewModelBase
 {
-    public string Name             { get; }
-    public string Balance          { get; }
-    public string IndustryCount    { get; }
-    public string IndustrySummary  { get; }
-    public string ContractCount    { get; }
-    public string ContractSummary  { get; }
+    public string Name                    { get; }
+    public string Balance                 { get; }
+    public string IndustryCount           { get; }
+    public string IndustrySummary         { get; }
+    public string ContractCount           { get; }
+    public string ExecutingContractSummary { get; }
+    public string PostedContractSummary   { get; }
+    public bool   HasPostedContracts      { get; }
 
     public AiCompanyViewModel(AiCompany company)
     {
-        Name = company.Name;
+        Name    = company.Name;
         Balance = $"${company.Balance:N0}";
 
-        IndustryCount = company.Industries.Count.ToString();
+        IndustryCount   = company.Industries.Count.ToString();
         IndustrySummary = company.Industries.Count == 0
             ? "—"
             : string.Join(", ", company.Industries.Select(FormatIndustry));
 
-        var activeCount = company.ActiveContracts.Count;
-        ContractCount = activeCount.ToString();
-        ContractSummary = activeCount == 0
+        // Contracts the AI is executing (accepted from market or another participant).
+        var executing = company.ActiveContracts.Where(c => !c.IsCounterpartyView).ToList();
+        ContractCount            = executing.Count.ToString();
+        ExecutingContractSummary = executing.Count == 0
             ? "—"
-            : string.Join(", ", company.ActiveContracts
-                .Select(c => $"{(c.Type == OfferType.Buy ? "Sell" : "Buy")} {c.QuantityPerTurn:N0} {c.ResourceName}/turn"));
+            : string.Join(", ", executing.Select(c =>
+                $"{(c.Type == OfferType.Buy ? "Sell" : "Buy")} {c.QuantityPerTurn:N0} {c.ResourceName}/turn"));
+
+        // Contracts the AI posted that another participant accepted (mirrors).
+        // Source on a mirror is the executor's name.
+        var posted = company.ActiveContracts.Where(c => c.IsCounterpartyView).ToList();
+        HasPostedContracts    = posted.Count > 0;
+        PostedContractSummary = posted.Count == 0
+            ? "—"
+            : string.Join(", ", posted.Select(c =>
+                $"{(c.Type == OfferType.Buy ? "Sell" : "Buy")} {c.QuantityPerTurn:N0} {c.ResourceName}/turn → {c.Source}"));
     }
 
     private static string FormatIndustry(IIndustry industry) =>

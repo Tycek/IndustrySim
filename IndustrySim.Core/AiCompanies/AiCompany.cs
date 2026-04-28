@@ -339,12 +339,13 @@ public class AiCompany : IMarketParticipant
 
             if (net > 10)
             {
+                // Surplus: AI sells its excess — acceptor pays and receives the resource.
                 var qty = (int)(Math.Round(Math.Min(net, 20) / 5) * 5);
                 if (qty >= 5)
                 {
                     market.AvailableContracts.Add(new Contract
                     {
-                        Type            = OfferType.Buy,
+                        Type            = OfferType.Sell,
                         ResourceName    = resource,
                         QuantityPerTurn = qty,
                         PricePerUnit    = Math.Round(basePrice * (decimal)(0.90 + rng.NextDouble() * 0.20), 2),
@@ -357,11 +358,12 @@ public class AiCompany : IMarketParticipant
             }
             else if (net < -5)
             {
+                // Deficit: AI buys what it needs — acceptor delivers and receives payment.
                 var qty = (int)(Math.Round(Math.Min(-net, 20) / 5) * 5);
                 qty = Math.Max(qty, 5);
                 market.AvailableContracts.Add(new Contract
                 {
-                    Type            = OfferType.Sell,
+                    Type            = OfferType.Buy,
                     ResourceName    = resource,
                     QuantityPerTurn = qty,
                     PricePerUnit    = Math.Round(basePrice * (decimal)(1.00 + rng.NextDouble() * 0.20), 2),

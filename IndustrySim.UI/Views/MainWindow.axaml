@@ -354,15 +354,24 @@
                                  RowDetailsVisibilityMode="VisibleWhenSelected">
                         <dg:DataGrid.RowDetailsTemplate>
                             <DataTemplate x:DataType="vm:AiCompanyViewModel">
-                                <Grid ColumnDefinitions="Auto,*,Auto,*" Margin="12,6,12,8">
-                                    <TextBlock Grid.Column="0" Text="Industries:"
+                                <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto"
+                                      Margin="12,6,12,8">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Industries:"
                                                FontWeight="SemiBold" Margin="0,0,8,0"/>
-                                    <TextBlock Grid.Column="1" Text="{Binding IndustrySummary}"
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding IndustrySummary}"
                                                TextWrapping="Wrap"/>
-                                    <TextBlock Grid.Column="2" Text="Contracts:"
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Executing:"
                                                FontWeight="SemiBold" Margin="24,0,8,0"/>
-                                    <TextBlock Grid.Column="3" Text="{Binding ContractSummary}"
+                                    <TextBlock Grid.Row="0" Grid.Column="3"
+                                               Text="{Binding ExecutingContractSummary}"
                                                TextWrapping="Wrap"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="Posted:"
+                                               FontWeight="SemiBold" Margin="24,4,8,0"
+                                               IsVisible="{Binding HasPostedContracts}"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="3"
+                                               Text="{Binding PostedContractSummary}"
+                                               TextWrapping="Wrap" Margin="0,4,0,0"
+                                               IsVisible="{Binding HasPostedContracts}"/>
                                 </Grid>
                             </DataTemplate>
                         </dg:DataGrid.RowDetailsTemplate>
