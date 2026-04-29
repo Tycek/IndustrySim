@@ -354,7 +354,7 @@
                                  RowDetailsVisibilityMode="VisibleWhenSelected">
                         <dg:DataGrid.RowDetailsTemplate>
                             <DataTemplate x:DataType="vm:AiCompanyViewModel">
-                                <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto"
+                                <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto,Auto"
                                       Margin="12,6,12,8">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="Industries:"
                                                FontWeight="SemiBold" Margin="0,0,8,0"/>
@@ -372,6 +372,11 @@
                                                Text="{Binding PostedContractSummary}"
                                                TextWrapping="Wrap" Margin="0,4,0,0"
                                                IsVisible="{Binding HasPostedContracts}"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Stockpile:"
+                                               FontWeight="SemiBold" Margin="0,4,8,0"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3"
+                                               Text="{Binding StockpileSummary}"
+                                               TextWrapping="Wrap" Margin="0,4,0,0"/>
                                 </Grid>
                             </DataTemplate>
                         </dg:DataGrid.RowDetailsTemplate>

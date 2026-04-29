@@ -8,14 +8,15 @@ namespace IndustrySim.UI.ViewModels;
 
 public class AiCompanyViewModel : ViewModelBase
 {
-    public string Name                    { get; }
-    public string Balance                 { get; }
-    public string IndustryCount           { get; }
-    public string IndustrySummary         { get; }
-    public string ContractCount           { get; }
+    public string Name                     { get; }
+    public string Balance                  { get; }
+    public string IndustryCount            { get; }
+    public string IndustrySummary          { get; }
+    public string ContractCount            { get; }
     public string ExecutingContractSummary { get; }
-    public string PostedContractSummary   { get; }
-    public bool   HasPostedContracts      { get; }
+    public string PostedContractSummary    { get; }
+    public bool   HasPostedContracts       { get; }
+    public string StockpileSummary         { get; }
 
     public AiCompanyViewModel(AiCompany company)
     {
@@ -43,6 +44,14 @@ public class AiCompanyViewModel : ViewModelBase
             ? "—"
             : string.Join(", ", posted.Select(c =>
                 $"{(c.Type == OfferType.Buy ? "Sell" : "Buy")} {c.QuantityPerTurn:N0} {c.ResourceName}/turn → {c.Source}"));
+
+        var stock = company.Inventory
+            .Where(kv => kv.Value > 0)
+            .OrderBy(kv => kv.Key)
+            .ToList();
+        StockpileSummary = stock.Count == 0
+            ? "—"
+            : string.Join(", ", stock.Select(kv => $"{kv.Key}: {kv.Value:N0}"));
     }
 
     private static string FormatIndustry(IIndustry industry) =>
