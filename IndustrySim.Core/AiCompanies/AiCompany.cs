@@ -168,8 +168,9 @@ public class AiCompany : IMarketParticipant
                 surplus[output.Name] = surplus.GetValueOrDefault(output.Name)
                     + Math.Min(output.Quantity, mine.Capacity);
 
-        // Processing industries: only count an industry when all its inputs are covered.
-        // Iterate until no further industries can become viable (handles dependency chains).
+        // Processing industries: run the viability-gated fixed-point to add outputs only
+        // when all inputs are covered by production. Industries that never become viable
+        // remain in `pending` and have their inputs subtracted below to signal demand.
         var pending = Industries.Where(i => i is not MineBase).ToList();
         bool progress;
         do
@@ -189,6 +190,13 @@ public class AiCompany : IMarketParticipant
             }
         }
         while (progress);
+
+        // Non-viable industries cannot contribute outputs (no phantom surplus), but they
+        // still represent real ongoing demand for their inputs — they consume from inventory
+        // each turn until it runs out.
+        foreach (var industry in pending)
+            foreach (var input in industry.InputsRequired)
+                surplus[input.Name] = surplus.GetValueOrDefault(input.Name) - input.Quantity;
 
         // Buy contracts: AI must deliver resources each turn — outflow.
         foreach (var contract in ActiveContracts.Where(c => !c.IsCounterpartyView && c.Type == OfferType.Buy))
