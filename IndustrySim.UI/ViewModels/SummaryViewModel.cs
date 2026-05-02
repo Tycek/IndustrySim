@@ -4,26 +4,29 @@ using System.Linq;
 using IndustrySim.Core.Game;
 using IndustrySim.Core.Industries;
 using IndustrySim.Core.Markets;
+using IndustrySim.Core.Models;
 
 namespace IndustrySim.UI.ViewModels;
 
 public class SummaryViewModel : ViewModelBase
 {
-    public ObservableCollection<ProductSummaryViewModel> Products { get; } = [];
-    public ObservableCollection<FinanceSummaryViewModel> Finances { get; } = [];
+    public ObservableCollection<ProductSummaryViewModel>  Products   { get; } = [];
+    public ObservableCollection<FinanceSummaryViewModel>  Finances   { get; } = [];
+    public ObservableCollection<PriceIndexViewModel>      PriceIndex { get; } = [];
 
-    public void Refresh(Player player)
+    public void Refresh(Player player, Market market)
     {
         RefreshProducts(player);
         RefreshFinances(player);
+        RefreshPriceIndex(market);
     }
 
     private void RefreshProducts(Player player)
     {
-        var produced   = new Dictionary<string, double>();
+        var produced    = new Dictionary<string, double>();
         var industryUse = new Dictionary<string, double>();
-        var delivered  = new Dictionary<string, double>(); // Buy contracts: player → market
-        var received   = new Dictionary<string, double>(); // Sell contracts: market → player
+        var delivered   = new Dictionary<string, double>(); // Buy contracts: player → market
+        var received    = new Dictionary<string, double>(); // Sell contracts: market → player
 
         foreach (var industry in player.Industries)
         {
@@ -64,17 +67,14 @@ public class SummaryViewModel : ViewModelBase
 
     private void RefreshFinances(Player player)
     {
-        // Income: market pays player for Buy contracts
         var contractIncome = player.ActiveContracts
             .Where(c => c.Type == OfferType.Buy)
             .Sum(c => c.TotalPerTurn);
 
-        // Cost: running costs for all active industries
         var runningCosts = player.Industries
             .Where(i => i is not MineBase mine || mine.IsOpen)
             .Sum(i => i.RunningCost);
 
-        // Cost: player pays market for Sell contracts
         var contractPayments = player.ActiveContracts
             .Where(c => c.Type == OfferType.Sell)
             .Sum(c => c.TotalPerTurn);
@@ -86,5 +86,16 @@ public class SummaryViewModel : ViewModelBase
         Finances.Add(new FinanceSummaryViewModel("Running costs",        -runningCosts));
         Finances.Add(new FinanceSummaryViewModel("Contract payments",    -contractPayments));
         Finances.Add(new FinanceSummaryViewModel("Net / turn",            net, isTotal: true));
+    }
+
+    private void RefreshPriceIndex(Market market)
+    {
+        PriceIndex.Clear();
+        foreach (var resource in Market.BasePrices.Keys.OrderBy(r => r))
+        {
+            var price = market.PriceIndex.GetValueOrDefault(resource, Market.BasePrices[resource]);
+            var prev  = market.PreviousPriceIndex.GetValueOrDefault(resource, Market.BasePrices[resource]);
+            PriceIndex.Add(new PriceIndexViewModel(resource, price, prev));
+        }
     }
 }

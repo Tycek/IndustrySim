@@ -27,7 +27,7 @@ public static class AiCompanyGenerator
 
     // All buildable industry types. Adding a new IIndustry subclass here is enough
     // to include it in the generator — no other changes needed.
-    private static readonly Func<IIndustry>[] AllFactories =
+    internal static readonly Func<IIndustry>[] AllFactories =
     [
         () => new CoalMine(),
         () => new IronOreMine(),
@@ -117,7 +117,7 @@ public static class AiCompanyGenerator
     /// Higher score = stronger market signal to build this industry right now.
     /// Input deficit is allowed to drive the score negative (clamped to ScoreFloor).
     /// </summary>
-    private static double Score(Func<IIndustry> factory, Dictionary<string, double> netBalance)
+    internal static double Score(Func<IIndustry> factory, Dictionary<string, double> netBalance)
     {
         var industry = factory();
         var score    = BaseWeight;
@@ -127,9 +127,14 @@ public static class AiCompanyGenerator
             score += Math.Max(0, -netBalance.GetValueOrDefault(output.Name)) / output.Quantity;
 
         // Input availability: surplus boosts the score; deficit penalises it.
-        // This prevents CokeOven from looking attractive when there is no coal.
+        // If the key is absent entirely (no producer exists in the economy), treat it as a
+        // full deficit (-input.Quantity) rather than neutral (0) — "no supply chain" is worse
+        // than "supply chain exists but is fully consumed".
         foreach (var input in industry.InputsRequired)
-            score += netBalance.GetValueOrDefault(input.Name) / input.Quantity;
+        {
+            var available = netBalance.TryGetValue(input.Name, out var v) ? v : -input.Quantity;
+            score += available / input.Quantity;
+        }
 
         return Math.Max(ScoreFloor, score);
     }
@@ -139,7 +144,7 @@ public static class AiCompanyGenerator
     /// covered by <paramref name="netBalance"/>. Extractive industries (no inputs)
     /// are always viable.
     /// </summary>
-    private static bool IsViable(IIndustry industry, Dictionary<string, double> netBalance) =>
+    internal static bool IsViable(IIndustry industry, Dictionary<string, double> netBalance) =>
         industry.InputsRequired.All(input =>
             netBalance.GetValueOrDefault(input.Name) >= input.Quantity);
 
@@ -147,7 +152,7 @@ public static class AiCompanyGenerator
     /// Selects one entry from <paramref name="candidates"/> using weighted-random
     /// sampling proportional to each entry's Score.
     /// </summary>
-    private static (Func<IIndustry> Factory, double Score) WeightedPick(
+    internal static (Func<IIndustry> Factory, double Score) WeightedPick(
         List<(Func<IIndustry> Factory, double Score)> candidates, Random rng)
     {
         var total      = candidates.Sum(c => c.Score);
@@ -176,7 +181,7 @@ public static class AiCompanyGenerator
     /// added iteratively until no more can run — this handles dependency chains of any
     /// depth without relying on declaration order.
     /// </summary>
-    private static Dictionary<string, double> ComputeNetBalance(
+    internal static Dictionary<string, double> ComputeNetBalance(
         IEnumerable<AiCompany> companies, Player player)
     {
         var allIndustries = player.Industries

@@ -5,6 +5,7 @@ namespace IndustrySim.Core.Markets;
 /// <summary>
 /// Holds the active one-time market offers. Each turn, all offers are decremented and
 /// expired ones are removed, then a random batch of new offers is added.
+/// New offers are priced relative to <see cref="PriceIndex"/>, which drifts with supply/demand.
 /// </summary>
 public class Market
 {
@@ -16,16 +17,61 @@ public class Market
         [ResourceNames.SteelIngot] = 40m,
     };
 
+    private const decimal MaxDriftPerTurn  = 0.03m; // 3 % per turn maximum move
+    private const decimal PriceFloor       = 0.40m; // floor = 40 % of base
+    private const decimal PriceCeiling     = 2.50m; // ceiling = 250 % of base
+
     private static readonly string[] Resources = [.. BasePrices.Keys];
 
     public List<MarketOffer> Offers             { get; set; } = [];
-    public List<Contract>   AvailableContracts { get; set; } = [];
+    public List<Contract>    AvailableContracts { get; set; } = [];
+
+    /// <summary>Running "fair price" per resource. Drifts with offer/contract imbalance.</summary>
+    public Dictionary<string, decimal> PriceIndex { get; set; } =
+        new(BasePrices.ToDictionary(kv => kv.Key, kv => kv.Value));
+
+    /// <summary>Snapshot of <see cref="PriceIndex"/> from the previous turn, used for trend arrows.</summary>
+    public Dictionary<string, decimal> PreviousPriceIndex { get; set; } =
+        new(BasePrices.ToDictionary(kv => kv.Key, kv => kv.Value));
+
+    /// <summary>
+    /// Adjusts <see cref="PriceIndex"/> based on the ratio of sell to buy pressure.
+    /// Prices drift up when buy pressure exceeds sell (ratio &lt; 0.8), down when sell exceeds buy
+    /// (ratio &gt; 1.2), and mean-revert toward base price when balanced.
+    /// Clamped to [basePrice × 0.40, basePrice × 2.50].
+    /// </summary>
+    public void AdjustPrices(Dictionary<string, double> sellPressure, Dictionary<string, double> buyPressure)
+    {
+        PreviousPriceIndex = new Dictionary<string, decimal>(PriceIndex);
+
+        foreach (var resource in BasePrices.Keys)
+        {
+            var sell      = sellPressure.GetValueOrDefault(resource);
+            var buy       = buyPressure.GetValueOrDefault(resource);
+            var current   = PriceIndex[resource];
+            var basePrice = BasePrices[resource];
+
+            var ratio = (sell == 0 && buy == 0) ? 1.0 : (buy == 0 ? double.MaxValue : sell / buy);
+
+            decimal drift;
+            if (ratio > 1.2)
+                drift = -(current * MaxDriftPerTurn);
+            else if (ratio < 0.8)
+                drift = current * MaxDriftPerTurn;
+            else
+                drift = (basePrice - current) * (MaxDriftPerTurn / 2);
+
+            var newPrice = current + drift;
+            newPrice = Math.Clamp(newPrice, basePrice * PriceFloor, basePrice * PriceCeiling);
+            PriceIndex[resource] = Math.Round(newPrice, 2);
+        }
+    }
 
     /// <summary>
     /// Decrements <see cref="MarketOffer.TurnsRemaining"/> on all offers, removes expired
     /// ones, then adds 2–5 new offers for randomly chosen resources and types.
     /// Also ticks available contracts and occasionally generates a new one.
-    /// New offers last 3–7 turns.
+    /// New offers last 3–7 turns. Prices are based on <see cref="PriceIndex"/>.
     /// Returns the non-Market offers that expired this tick so callers can refund pre-committed funds.
     /// </summary>
     public IReadOnlyList<MarketOffer> GenerateOffers(Random rng)
@@ -41,7 +87,7 @@ public class Market
         {
             var resource = Resources[rng.Next(Resources.Length)];
             var type     = rng.Next(2) == 0 ? OfferType.Sell : OfferType.Buy;
-            Offers.Add(MakeOffer(rng, type, resource, BasePrices[resource]));
+            Offers.Add(MakeOffer(rng, type, resource, PriceIndex[resource]));
         }
 
         // Contracts
@@ -53,13 +99,13 @@ public class Market
         {
             var resource = Resources[rng.Next(Resources.Length)];
             var type     = rng.Next(2) == 0 ? OfferType.Sell : OfferType.Buy;
-            AvailableContracts.Add(MakeContract(rng, type, resource, BasePrices[resource]));
+            AvailableContracts.Add(MakeContract(rng, type, resource, PriceIndex[resource]));
         }
 
         return expired;
     }
 
-    private static MarketOffer MakeOffer(Random rng, OfferType type, string resource, decimal basePrice)
+    private static MarketOffer MakeOffer(Random rng, OfferType type, string resource, decimal indexPrice)
     {
         var priceMultiplier = 0.8 + rng.NextDouble() * 0.4; // ±20 %
         var quantity        = rng.Next(1, 11) * 10;          // 10, 20, … 100
@@ -69,24 +115,23 @@ public class Market
             Type           = type,
             ResourceName   = resource,
             Quantity       = quantity,
-            PricePerUnit   = Math.Round(basePrice * (decimal)priceMultiplier, 2),
+            PricePerUnit   = Math.Round(indexPrice * (decimal)priceMultiplier, 2),
             TurnsRemaining = rng.Next(3, 8),
         };
     }
 
-    private static Contract MakeContract(Random rng, OfferType type, string resource, decimal basePrice)
+    private static Contract MakeContract(Random rng, OfferType type, string resource, decimal indexPrice)
     {
-        var priceMultiplier = 0.85 + rng.NextDouble() * 0.3; // 85–115 % of base
-        var quantity        = rng.Next(1, 5) * 5;            // 5, 10, 15, or 20 per turn
+        var priceMultiplier = 0.85 + rng.NextDouble() * 0.3; // 85–115 % of index
 
         return new Contract
         {
-            Type           = type,
-            ResourceName   = resource,
-            QuantityPerTurn = quantity,
-            PricePerUnit   = Math.Round(basePrice * (decimal)priceMultiplier, 2),
-            DurationTurns  = rng.Next(5, 16),                // 5–15 turns
-            TurnsAvailable = rng.Next(3, 7),                 // 3–6 turns to accept
+            Type            = type,
+            ResourceName    = resource,
+            QuantityPerTurn = rng.Next(1, 5) * 5,            // 5, 10, 15, or 20 per turn
+            PricePerUnit    = Math.Round(indexPrice * (decimal)priceMultiplier, 2),
+            DurationTurns   = rng.Next(5, 16),               // 5–15 turns
+            TurnsAvailable  = rng.Next(3, 7),                // 3–6 turns to accept
         };
     }
 }

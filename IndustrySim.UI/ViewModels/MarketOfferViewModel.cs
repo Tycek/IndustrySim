@@ -21,19 +21,23 @@ public class MarketOfferViewModel : ViewModelBase
     public decimal TotalValue        => _offer.TotalPrice;
     public int     TurnsLeft         => _offer.TurnsRemaining;
 
-    public bool CanFulfill     { get; }
-    public bool IsPlayerOwned  { get; }
+    public bool CanFulfill       { get; }
+    public bool IsPlayerOwned    { get; }
+    /// <summary>True when the offer price is below the current fair-price index for this resource.</summary>
+    public bool IsBelowFairPrice { get; }
 
     public IRelayCommand AcceptCommand  { get; }
     public IRelayCommand CancelCommand  { get; }
 
     public MarketOfferViewModel(MarketOffer offer, bool canFulfill, bool isPlayerOwned,
+        decimal fairPrice,
         Action<MarketOffer> onAccept, Action<MarketOffer> onCancel)
     {
-        _offer        = offer;
-        CanFulfill    = canFulfill;
-        IsPlayerOwned = isPlayerOwned;
-        AcceptCommand = new RelayCommand(() => onAccept(offer), () => !isPlayerOwned);
-        CancelCommand = new RelayCommand(() => onCancel(offer), () => isPlayerOwned);
+        _offer           = offer;
+        CanFulfill       = canFulfill;
+        IsPlayerOwned    = isPlayerOwned;
+        IsBelowFairPrice = offer.PricePerUnit < fairPrice;
+        AcceptCommand    = new RelayCommand(() => onAccept(offer), () => !isPlayerOwned);
+        CancelCommand    = new RelayCommand(() => onCancel(offer), () => isPlayerOwned);
     }
 }

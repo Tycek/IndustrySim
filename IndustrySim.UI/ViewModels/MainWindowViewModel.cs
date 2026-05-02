@@ -200,7 +200,8 @@ public partial class MainWindowViewModel : ViewModelBase
                 ? player.Inventory.GetValueOrDefault(offer.ResourceName) >= offer.Quantity
                 : player.Balance >= offer.TotalPrice;
             var isPlayerOwned = offer.Source == playerName;
-            _rawMarketOffers.Add(new MarketOfferViewModel(offer, canFulfill, isPlayerOwned, AcceptOffer, CancelOffer));
+            var fairPrice     = _loop.State.Market.PriceIndex.GetValueOrDefault(offer.ResourceName, 0m);
+            _rawMarketOffers.Add(new MarketOfferViewModel(offer, canFulfill, isPlayerOwned, fairPrice, AcceptOffer, CancelOffer));
         }
         ApplyMarketFilter();
 
@@ -231,6 +232,6 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var company in _loop.State.AiCompanies)
             AiCompanies.Add(new AiCompanyViewModel(company));
 
-        Summary.Refresh(player);
+        Summary.Refresh(player, _loop.State.Market);
     }
 }

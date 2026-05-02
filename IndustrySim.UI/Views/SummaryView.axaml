@@ -5,7 +5,7 @@
              x:Class="IndustrySim.UI.Views.SummaryView"
              x:DataType="vm:SummaryViewModel">
 
-    <Grid RowDefinitions="*,8,Auto" Margin="8">
+    <Grid RowDefinitions="*,8,Auto,8,Auto" Margin="8">
 
         <!-- Products per turn -->
         <DockPanel Grid.Row="0">
@@ -19,12 +19,12 @@
                          CanUserResizeColumns="True" CanUserSortColumns="True"
                          GridLinesVisibility="Horizontal">
                 <dg:DataGrid.Columns>
-                    <dg:DataGridTextColumn Header="Resource"               Binding="{Binding Resource}"             Width="*"/>
-                    <dg:DataGridTextColumn Header="Produced / Turn"        Binding="{Binding Produced}"             Width="150"/>
-                    <dg:DataGridTextColumn Header="Industry Use"           Binding="{Binding IndustryUse}"          Width="110"/>
-                    <dg:DataGridTextColumn Header="Delivered to Contracts" Binding="{Binding DeliveredToContracts}" Width="170"/>
+                    <dg:DataGridTextColumn Header="Resource"                Binding="{Binding Resource}"              Width="*"/>
+                    <dg:DataGridTextColumn Header="Produced / Turn"         Binding="{Binding Produced}"              Width="150"/>
+                    <dg:DataGridTextColumn Header="Industry Use"            Binding="{Binding IndustryUse}"           Width="110"/>
+                    <dg:DataGridTextColumn Header="Delivered to Contracts"  Binding="{Binding DeliveredToContracts}"  Width="170"/>
                     <dg:DataGridTextColumn Header="Received from Contracts" Binding="{Binding ReceivedFromContracts}" Width="180"/>
-                    <dg:DataGridTextColumn Header="Net / Turn"             Binding="{Binding Net}"                  Width="100" SortMemberPath="NetValue"/>
+                    <dg:DataGridTextColumn Header="Net / Turn"              Binding="{Binding Net}"                   Width="100" SortMemberPath="NetValue"/>
                 </dg:DataGrid.Columns>
             </dg:DataGrid>
         </DockPanel>
@@ -47,6 +47,26 @@
                 <dg:DataGrid.Columns>
                     <dg:DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="*"/>
                     <dg:DataGridTextColumn Header="Per Turn"  Binding="{Binding PerTurn}"  Width="120"/>
+                </dg:DataGrid.Columns>
+            </dg:DataGrid>
+        </DockPanel>
+
+        <!-- Market price index -->
+        <DockPanel Grid.Row="4">
+            <TextBlock DockPanel.Dock="Top" Text="Market Price Index"
+                       FontWeight="SemiBold" Margin="0,0,0,4"/>
+            <TextBlock DockPanel.Dock="Top"
+                       Text="Fair price per resource based on visible offer/contract activity. Trend shows movement since last turn."
+                       FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,0,0,6"/>
+            <dg:DataGrid ItemsSource="{Binding PriceIndex}"
+                         AutoGenerateColumns="False" IsReadOnly="True"
+                         CanUserResizeColumns="True" CanUserSortColumns="False"
+                         GridLinesVisibility="Horizontal"
+                         MaxHeight="130">
+                <dg:DataGrid.Columns>
+                    <dg:DataGridTextColumn Header="Resource"   Binding="{Binding Resource}"  Width="*"/>
+                    <dg:DataGridTextColumn Header="Fair Price" Binding="{Binding FairPrice}" Width="120"/>
+                    <dg:DataGridTextColumn Header="Trend"      Binding="{Binding Trend}"     Width="60"/>
                 </dg:DataGrid.Columns>
             </dg:DataGrid>
         </DockPanel>

@@ -1,3 +1,4 @@
+using IndustrySim.Core.Game;
 using IndustrySim.Core.Industries;
 using IndustrySim.Core.Markets;
 using IndustrySim.Core.Models;
@@ -153,24 +154,49 @@ public class AiCompany : IMarketParticipant
     /// Net units per turn per resource: production minus internal consumption minus
     /// quantities committed to active Buy contracts (where we must deliver).
     /// Positive = surplus; negative = deficit.
+    /// Only viable processing industries (all inputs covered) contribute outputs — this
+    /// mirrors the constraint in ComputeNetBalance and prevents phantom surpluses from
+    /// industries that cannot actually run.
     /// </summary>
     private Dictionary<string, double> ComputeNetSurplus()
     {
         var surplus = new Dictionary<string, double>();
 
-        foreach (var industry in Industries)
+        // Mines: always viable; use capacity-adjusted output.
+        foreach (var mine in Industries.OfType<MineBase>().Where(m => m.IsOpen))
+            foreach (var output in mine.OutputsProduced)
+                surplus[output.Name] = surplus.GetValueOrDefault(output.Name)
+                    + Math.Min(output.Quantity, mine.Capacity);
+
+        // Processing industries: only count an industry when all its inputs are covered.
+        // Iterate until no further industries can become viable (handles dependency chains).
+        var pending = Industries.Where(i => i is not MineBase).ToList();
+        bool progress;
+        do
         {
-            if (industry is MineBase mine && !mine.IsOpen) continue;
-            foreach (var output in industry.OutputsProduced)
-                surplus[output.Name] = surplus.GetValueOrDefault(output.Name) + output.Quantity;
+            progress = false;
+            foreach (var industry in pending.ToList())
+            {
+                if (!AiCompanyGenerator.IsViable(industry, surplus)) continue;
+
+                foreach (var input in industry.InputsRequired)
+                    surplus[input.Name] = surplus.GetValueOrDefault(input.Name) - input.Quantity;
+                foreach (var output in industry.OutputsProduced)
+                    surplus[output.Name] = surplus.GetValueOrDefault(output.Name) + output.Quantity;
+
+                pending.Remove(industry);
+                progress = true;
+            }
         }
+        while (progress);
 
-        foreach (var industry in Industries.Where(i => i is not MineBase))
-            foreach (var input in industry.InputsRequired)
-                surplus[input.Name] = surplus.GetValueOrDefault(input.Name) - input.Quantity;
-
+        // Buy contracts: AI must deliver resources each turn — outflow.
         foreach (var contract in ActiveContracts.Where(c => !c.IsCounterpartyView && c.Type == OfferType.Buy))
             surplus[contract.ResourceName] = surplus.GetValueOrDefault(contract.ResourceName) - contract.QuantityPerTurn;
+
+        // Sell contracts: AI receives resources each turn — inflow.
+        foreach (var contract in ActiveContracts.Where(c => !c.IsCounterpartyView && c.Type == OfferType.Sell))
+            surplus[contract.ResourceName] = surplus.GetValueOrDefault(contract.ResourceName) + contract.QuantityPerTurn;
 
         return surplus;
     }
@@ -188,7 +214,7 @@ public class AiCompany : IMarketParticipant
         {
             var net = surplus.GetValueOrDefault(offer.ResourceName);
             if (net >= 0) continue;
-            var basePrice = Market.BasePrices.GetValueOrDefault(offer.ResourceName, 10m);
+            var basePrice = market.PriceIndex.GetValueOrDefault(offer.ResourceName, 10m);
             if (offer.PricePerUnit > basePrice * 1.15m) continue;
             if (Balance < offer.TotalPrice) continue;
 
@@ -209,7 +235,7 @@ public class AiCompany : IMarketParticipant
         {
             var net = surplus.GetValueOrDefault(offer.ResourceName);
             if (net <= 0) continue;
-            var basePrice = Market.BasePrices.GetValueOrDefault(offer.ResourceName, 10m);
+            var basePrice = market.PriceIndex.GetValueOrDefault(offer.ResourceName, 10m);
             if (offer.PricePerUnit < basePrice * 0.85m) continue;
             var inInventory = Inventory.GetValueOrDefault(offer.ResourceName);
             if (inInventory < offer.Quantity) continue;
@@ -237,7 +263,7 @@ public class AiCompany : IMarketParticipant
         {
             var net = surplus.GetValueOrDefault(contract.ResourceName);
             if (net < contract.QuantityPerTurn) continue;
-            var basePrice = Market.BasePrices.GetValueOrDefault(contract.ResourceName, 10m);
+            var basePrice = market.PriceIndex.GetValueOrDefault(contract.ResourceName, 10m);
             if (contract.PricePerUnit < basePrice * 0.85m) continue;
 
             // For bilateral contracts verify the poster can pay at least the first turn.
@@ -261,7 +287,7 @@ public class AiCompany : IMarketParticipant
         {
             var net = surplus.GetValueOrDefault(contract.ResourceName);
             if (net >= 0) continue;
-            var basePrice = Market.BasePrices.GetValueOrDefault(contract.ResourceName, 10m);
+            var basePrice = market.PriceIndex.GetValueOrDefault(contract.ResourceName, 10m);
             if (contract.PricePerUnit > basePrice * 1.15m) continue;
             if (Balance < contract.TotalPerTurn * contract.DurationTurns) continue;
 
@@ -288,7 +314,7 @@ public class AiCompany : IMarketParticipant
     {
         foreach (var (resource, net) in surplus)
         {
-            var basePrice = Market.BasePrices.GetValueOrDefault(resource, 10m);
+            var basePrice = market.PriceIndex.GetValueOrDefault(resource, 10m);
 
             if (net > 5 && rng.NextDouble() < 0.30)
             {
@@ -335,7 +361,7 @@ public class AiCompany : IMarketParticipant
 
         foreach (var (resource, net) in surplus)
         {
-            var basePrice = Market.BasePrices.GetValueOrDefault(resource, 10m);
+            var basePrice = market.PriceIndex.GetValueOrDefault(resource, 10m);
 
             if (net > 10)
             {
@@ -374,5 +400,42 @@ public class AiCompany : IMarketParticipant
                 return;
             }
         }
+    }
+
+    // ── Mid-game industry building ────────────────────────────────────────────
+
+    private const decimal ShortageThreshold  = 1.40m; // price must be 40 % above base to trigger
+    private const double  BuildProbability   = 0.10;  // 10 % chance per turn when threshold is met
+    private const decimal BuildCostSafety    = 3.0m;  // must hold 3× build cost before committing
+
+    /// <summary>
+    /// Considers building a new industry when at least one resource is trading above its
+    /// shortage threshold. Uses the same opportunity-scoring logic as the generator so the
+    /// decision reflects what the supply chain actually needs, not just what is expensive.
+    /// </summary>
+    public void ConsiderBuildingIndustry(
+        IReadOnlyDictionary<string, decimal> priceIndex,
+        IReadOnlyList<AiCompany> allCompanies,
+        Player player,
+        Random rng)
+    {
+        var hasShortage = priceIndex.Any(kv =>
+            Market.BasePrices.TryGetValue(kv.Key, out var basePrice) && kv.Value >= basePrice * ShortageThreshold);
+        if (!hasShortage) return;
+
+        if (rng.NextDouble() >= BuildProbability) return;
+
+        var netBalance = AiCompanyGenerator.ComputeNetBalance(allCompanies, player);
+        var candidates = AiCompanyGenerator.AllFactories
+            .Select(f => (Factory: f, Score: AiCompanyGenerator.Score(f, netBalance)))
+            .ToList();
+
+        var chosen   = AiCompanyGenerator.WeightedPick(candidates, rng);
+        var industry = chosen.Factory();
+
+        if (Balance < industry.BuildCost * BuildCostSafety) return;
+
+        Balance -= industry.BuildCost;
+        Industries.Add(industry);
     }
 }

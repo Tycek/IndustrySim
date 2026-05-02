@@ -6,20 +6,6 @@ Gaps and missing behaviors identified by analysis of `AiCompany.cs`, `AiCompanyG
 
 ## Correctness issues (cause observable bugs)
 
-### 1. Sell contract inflows not counted in surplus
-`ComputeNetSurplus` deducts quantities committed by active Buy contracts (delivery obligations) but never adds the inbound flow from active Sell contracts (resources the AI receives each turn). An AI receiving 15 Coal Coke/turn via contract still computes its Coal Coke surplus as zero incoming, and may redundantly buy more or post a defensive Buy contract on top of an already-covered deficit.
-
-**Fix:** In `ComputeNetSurplus`, add a loop over active Sell contracts (non-mirror, `Type == OfferType.Sell`) and add `contract.QuantityPerTurn` to the surplus for that resource.
-
----
-
-### 2. Surplus uses static `OutputsProduced`, not actual mine output
-Mines deplete — their real output per turn shrinks as capacity runs low. But `ComputeNetSurplus` uses `industry.OutputsProduced` (the configured full rate). A mine with 3 units of capacity left still appears to produce 20/turn. This causes the AI to overcommit delivery contracts in a mine's final turns, then accumulate strikes as the mine runs dry.
-
-**Fix:** For `MineBase` instances, use `Math.Min(mine.BaseOutput, mine.Capacity)` instead of `output.Quantity` when computing surplus.
-
----
-
 ### 3. No graceful contract exit
 When a mine depletes and delivery contracts become unfulfillable, the AI passively accumulates strikes one by one until cancellation with a penalty. There is no attempt to:
 - Stop accepting new Buy contracts when already overcommitted
@@ -78,8 +64,6 @@ New companies spawn on a fixed schedule (every 10 turns, 30% chance). There is n
 
 | Priority | Item | Reason |
 |----------|------|---------|
-| High | #1 Sell contract inflows | Small fix, causes measurable over-buying |
-| High | #2 Mine output vs OutputsProduced | Causes overcommitment in mine's final turns |
 | High | #4 Mid-game industry building | Biggest strategic gap; architecture is ready |
 | Medium | #3 Graceful contract exit | Reduces passive bankruptcy spiral |
 | Medium | #5 Stockpile in market decisions | Makes trading feel rational |

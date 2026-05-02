@@ -222,14 +222,14 @@ public class GameLoop
 
         var participants = BuildParticipantsLookup();
 
-        // Expire stale offers; add new ones. Collect expired non-Market offers for refunds.
-        var expiredOffers = State.Market.GenerateOffers(_rng);
-        RefundExpiredOffers(expiredOffers, participants);
-
         // Each AI company runs its industries, executes contracts, and participates in the market.
         var aiDepletedMines = new List<string>();
         foreach (var company in State.AiCompanies)
             aiDepletedMines.AddRange(company.ProcessTurn(State.Market, _rng, participants));
+
+        // AI companies consider building new industries based on current price signals.
+        foreach (var company in State.AiCompanies)
+            company.ConsiderBuildingIndustry(State.Market.PriceIndex, State.AiCompanies, State.Player, _rng);
 
         // Every 10 turns there is a 30 % chance a new competitor enters the market.
         var newAiCompanies = new List<string>();
@@ -349,6 +349,15 @@ public class GameLoop
             State.Player.Balance -= industry.RunningCost;
         }
 
+        // Compute offer/contract pressure and drift the price index.
+        var (sellPressure, buyPressure) = ComputeMarketPressure(participants);
+        State.Market.AdjustPrices(sellPressure, buyPressure);
+
+        // Expire stale offers, refund pre-committed funds, then generate new offers using
+        // the freshly adjusted price index.
+        var expiredOffers = State.Market.GenerateOffers(_rng);
+        RefundExpiredOffers(expiredOffers, participants);
+
         var bankruptCompanies = DissolveInsolventAiCompanies(participants);
 
         return new TurnEvents(depletedThisTurn, cancelledContracts, newAiCompanies, bankruptCompanies);
@@ -396,6 +405,31 @@ public class GameLoop
     /// presence and removes any active contracts they hold with other participants.
     /// No penalty is charged to the player or counterparties — the company is simply gone.
     /// </summary>
+    /// <summary>
+    /// Sums current one-time offer quantities and active Buy-contract quantities per resource
+    /// to produce the sell and buy pressure signals used by <see cref="Market.AdjustPrices"/>.
+    /// </summary>
+    private (Dictionary<string, double> sell, Dictionary<string, double> buy) ComputeMarketPressure(
+        IReadOnlyDictionary<string, IMarketParticipant> participants)
+    {
+        var sell = new Dictionary<string, double>();
+        var buy  = new Dictionary<string, double>();
+
+        foreach (var offer in State.Market.Offers)
+        {
+            if (offer.Type == OfferType.Sell)
+                sell[offer.ResourceName] = sell.GetValueOrDefault(offer.ResourceName) + offer.Quantity;
+            else
+                buy[offer.ResourceName] = buy.GetValueOrDefault(offer.ResourceName) + offer.Quantity;
+        }
+
+        foreach (var participant in participants.Values)
+            foreach (var contract in participant.ActiveContracts.Where(c => !c.IsCounterpartyView && c.Type == OfferType.Buy))
+                buy[contract.ResourceName] = buy.GetValueOrDefault(contract.ResourceName) + contract.QuantityPerTurn;
+
+        return (sell, buy);
+    }
+
     private List<string> DissolveInsolventAiCompanies(
         IReadOnlyDictionary<string, IMarketParticipant> participants)
     {
