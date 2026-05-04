@@ -15,6 +15,22 @@ public class Market
         [ResourceNames.IronOre]    = 8m,
         [ResourceNames.CoalCoke]   = 15m,
         [ResourceNames.SteelIngot] = 40m,
+        [ResourceNames.SteelWire]   = 28m,
+        [ResourceNames.SteelBar]    = 55m,
+        [ResourceNames.SteelPlate]  = 90m,
+        [ResourceNames.CopperOre]       = 7m,
+        [ResourceNames.CopperIngot]     = 35m,
+        [ResourceNames.CopperWire]      = 24m,
+        [ResourceNames.CopperPipe]      = 45m,
+        [ResourceNames.CrudeOil]        = 6m,
+        [ResourceNames.Gas]             = 8m,
+        [ResourceNames.Diesel]          = 10m,
+        [ResourceNames.Kerosene]        = 9m,
+        [ResourceNames.Chemicals]       = 12m,
+        [ResourceNames.PlasticResin]    = 14m,
+        [ResourceNames.Fertiliser]      = 22m,
+        [ResourceNames.SyntheticRubber] = 32m,
+        [ResourceNames.Plastics]        = 18m,
     };
 
     private const decimal MaxDriftPerTurn  = 0.03m; // 3 % per turn maximum move

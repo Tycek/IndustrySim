@@ -28,7 +28,12 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private string _marketSourceFilter   = "All";
 
     public IReadOnlyList<string> MarketResourceOptions { get; } =
-        ["All", ResourceNames.Coal, ResourceNames.IronOre, ResourceNames.CoalCoke, ResourceNames.SteelIngot];
+        ["All", ResourceNames.Coal, ResourceNames.IronOre, ResourceNames.CoalCoke, ResourceNames.SteelIngot,
+         ResourceNames.SteelWire, ResourceNames.SteelBar, ResourceNames.SteelPlate,
+         ResourceNames.CopperOre, ResourceNames.CopperIngot, ResourceNames.CopperWire, ResourceNames.CopperPipe,
+         ResourceNames.CrudeOil, ResourceNames.Gas, ResourceNames.Diesel, ResourceNames.Kerosene,
+         ResourceNames.Chemicals, ResourceNames.PlasticResin, ResourceNames.Fertiliser,
+         ResourceNames.SyntheticRubber, ResourceNames.Plastics];
 
     public IReadOnlyList<string> MarketTypeOptions   { get; } = ["All", "Buy", "Sell"];
     public IReadOnlyList<string> MarketSourceOptions { get; } = ["All", "Market", "AI Company", "My Offers"];
@@ -54,10 +59,21 @@ public partial class MainWindowViewModel : ViewModelBase
 
         Catalog =
         [
-            new("Coal Mine",        500m, 50m, () => new CoalMine(),        Build),
-            new("Iron Ore Mine",    600m, 60m, () => new IronOreMine(),     Build),
-            new("Coke Oven",        300m, 30m, () => new CokeOven(),        Build),
-            new("Iron Ore Smelter", 800m, 80m, () => new IronOreSmelter(), Build),
+            new("Coal Mine",          500m, 50m, () => new CoalMine(),          Build),
+            new("Iron Ore Mine",      600m, 60m, () => new IronOreMine(),       Build),
+            new("Coke Oven",          300m, 30m, () => new CokeOven(),          Build),
+            new("Iron Ore Smelter",   800m, 80m, () => new IronOreSmelter(),    Build),
+            new("Steel Wire Drawer",   600m, 60m, () => new SteelWireDrawer(),   Build),
+            new("Steel Bar Roller",    500m, 50m, () => new SteelBarRoller(),    Build),
+            new("Steel Plate Mill",    900m, 90m, () => new SteelPlateMill(),    Build),
+            new("Copper Mine",         650m,  65m,  () => new CopperMine(),        Build),
+            new("Copper Smelter",      750m,  75m,  () => new CopperSmelter(),     Build),
+            new("Copper Wire Drawer",  550m,  55m,  () => new CopperWireDrawer(),  Build),
+            new("Copper Pipe Foundry", 600m,  60m,  () => new CopperPipeFoundry(), Build),
+            new("Oil Well",            700m,  70m,  () => new OilWell(),           Build),
+            new("Oil Refinery",        1500m, 150m, () => new OilRefinery(),       Build),
+            new("Chemical Plant",      1000m, 100m, () => new ChemicalPlant(),     Build),
+            new("Plastic Plant",       800m,  80m,  () => new PlasticPlant(),      Build),
         ];
 
         RefreshState();

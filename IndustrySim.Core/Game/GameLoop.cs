@@ -25,7 +25,7 @@ public class GameLoop
             Player = new Player { Name = playerName, Balance = startingBalance }
         };
 
-        var initialCount = Random.Shared.Next(2, 5); // 2–4 companies at game start
+        var initialCount = Random.Shared.Next(2, 7); // 2–4 companies at game start
         state.AiCompanies.AddRange(
             AiCompanyGenerator.GenerateInitial(initialCount, Random.Shared, state.Player));
 

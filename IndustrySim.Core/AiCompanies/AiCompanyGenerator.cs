@@ -18,11 +18,13 @@ public static class AiCompanyGenerator
 {
     private static readonly string[] Names =
     [
-        "Ironstone Co.",      "Blackrock Industries", "Ashford Mining",
-        "Redstone Partners",  "Northern Ore Ltd.",    "Coppergate Foundry",
-        "Silverton Works",    "Durham Resources",     "Midland Metals",
-        "Eastwick Smelting",  "Greenvale Mining",     "Crown Foundry",
-        "Highfield Resources","Westgate Materials",   "Kingsbridge Metals",
+        "Northgate Industrial",   "Ashford Group",          "Redstone Corp.",
+        "Durham Holdings",        "Crown Industries",       "Silverton Partners",
+        "Midland Industrial",     "Westgate Resources",     "Kingsbridge Holdings",
+        "Eastwick Group",         "Greenvale Industries",   "Highfield Corp.",
+        "Ironbridge Industrial",  "Caldwell Materials",     "Hartwell Group",
+        "Pemberton Industries",   "Stanwick Holdings",      "Falconer Corp.",
+        "Blackmoor Industrial",   "Ravenswood Group",
     ];
 
     // All buildable industry types. Adding a new IIndustry subclass here is enough
@@ -33,6 +35,17 @@ public static class AiCompanyGenerator
         () => new IronOreMine(),
         () => new CokeOven(),
         () => new IronOreSmelter(),
+        () => new SteelWireDrawer(),
+        () => new SteelBarRoller(),
+        () => new SteelPlateMill(),
+        () => new CopperMine(),
+        () => new CopperSmelter(),
+        () => new CopperWireDrawer(),
+        () => new CopperPipeFoundry(),
+        () => new OilWell(),
+        () => new OilRefinery(),
+        () => new ChemicalPlant(),
+        () => new PlasticPlant(),
     ];
 
     private const double BaseWeight  = 1.0;
