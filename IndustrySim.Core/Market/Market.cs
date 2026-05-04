@@ -35,7 +35,7 @@ public class Market
 
     private const decimal MaxDriftPerTurn  = 0.03m; // 3 % per turn maximum move
     private const decimal PriceFloor       = 0.40m; // floor = 40 % of base
-    private const decimal PriceCeiling     = 2.50m; // ceiling = 250 % of base
+    private const decimal PriceCeiling     = 5.00m; // ceiling = 500 % of base
 
     private static readonly string[] Resources = [.. BasePrices.Keys];
 
