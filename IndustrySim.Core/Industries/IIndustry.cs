@@ -15,6 +15,9 @@ public interface IIndustry
     /// <summary>Money deducted from the player each turn this industry operates.</summary>
     decimal RunningCost { get; }
 
+    /// <summary>When true the industry is in standby: produces nothing and pays only 10% of running cost.</summary>
+    bool IsSuspended { get; }
+
     /// <summary>Resources consumed per tick at full operation.</summary>
     IReadOnlyList<Resource> InputsRequired { get; }
 

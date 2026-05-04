@@ -65,35 +65,64 @@
         <!-- Main tabs -->
         <TabControl>
 
-            <!-- Industries tab -->
-            <TabItem Header="Industries">
+            <!-- Company tab: My Industries + Stockpile + Build catalog -->
+            <TabItem Header="Company">
                 <Grid RowDefinitions="*,4,*" Margin="8">
 
-                    <DockPanel Grid.Row="0">
-                        <TextBlock DockPanel.Dock="Top" Text="My Industries"
-                                   FontWeight="SemiBold" Margin="0,0,0,4"/>
-                        <dg:DataGrid ItemsSource="{Binding PlayerIndustries}"
-                                     AutoGenerateColumns="False" IsReadOnly="True"
-                                     CanUserResizeColumns="True" CanUserSortColumns="False"
-                                     GridLinesVisibility="Horizontal">
-                            <dg:DataGrid.Columns>
-                                <dg:DataGridTextColumn Header="Name"         Binding="{Binding Name}"        Width="*"/>
-                                <dg:DataGridTextColumn Header="Status"       Binding="{Binding Status}"      Width="*"/>
-                                <dg:DataGridTextColumn Header="Running Cost" Binding="{Binding RunningCost}" Width="120"/>
-                                <dg:DataGridTemplateColumn Width="80">
-                                    <dg:DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate x:DataType="vm:OwnedIndustryViewModel">
-                                            <Button Command="{Binding CloseCommand}" Content="Close"
-                                                    HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
-                                        </DataTemplate>
-                                    </dg:DataGridTemplateColumn.CellTemplate>
-                                </dg:DataGridTemplateColumn>
-                            </dg:DataGrid.Columns>
-                        </dg:DataGrid>
-                    </DockPanel>
+                    <!-- Top half: My Industries (left) + Stockpile (right) -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*,8,220">
+
+                        <DockPanel Grid.Column="0">
+                            <TextBlock DockPanel.Dock="Top" Text="My Industries"
+                                       FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <dg:DataGrid ItemsSource="{Binding PlayerIndustries}"
+                                         AutoGenerateColumns="False" IsReadOnly="True"
+                                         CanUserResizeColumns="True" CanUserSortColumns="False"
+                                         GridLinesVisibility="Horizontal">
+                                <dg:DataGrid.Columns>
+                                    <dg:DataGridTextColumn Header="Name"         Binding="{Binding Name}"        Width="*"/>
+                                    <dg:DataGridTextColumn Header="Status"       Binding="{Binding Status}"      Width="*"/>
+                                    <dg:DataGridTextColumn Header="Running Cost" Binding="{Binding RunningCost}" Width="160"/>
+                                    <dg:DataGridTemplateColumn Width="160">
+                                        <dg:DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate x:DataType="vm:OwnedIndustryViewModel">
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                                    <Button Command="{Binding SuspendCommand}" Content="Suspend"
+                                                            IsVisible="{Binding CanSuspend}"
+                                                            Padding="8,2" Margin="2"/>
+                                                    <Button Command="{Binding ResumeCommand}" Content="Resume"
+                                                            IsVisible="{Binding CanResume}"
+                                                            Padding="8,2" Margin="2"/>
+                                                    <Button Command="{Binding CloseCommand}" Content="Close"
+                                                            IsVisible="{Binding CanClose}"
+                                                            Padding="8,2" Margin="2"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </dg:DataGridTemplateColumn.CellTemplate>
+                                    </dg:DataGridTemplateColumn>
+                                </dg:DataGrid.Columns>
+                            </dg:DataGrid>
+                        </DockPanel>
+
+                        <DockPanel Grid.Column="2">
+                            <TextBlock DockPanel.Dock="Top" Text="Stockpile"
+                                       FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <dg:DataGrid ItemsSource="{Binding Stockpile}"
+                                         AutoGenerateColumns="False" IsReadOnly="True"
+                                         CanUserResizeColumns="True" CanUserSortColumns="False"
+                                         GridLinesVisibility="Horizontal">
+                                <dg:DataGrid.Columns>
+                                    <dg:DataGridTextColumn Header="Resource" Binding="{Binding Resource}" Width="*"/>
+                                    <dg:DataGridTextColumn Header="Qty"      Binding="{Binding Quantity}" Width="70"/>
+                                </dg:DataGrid.Columns>
+                            </dg:DataGrid>
+                        </DockPanel>
+
+                    </Grid>
 
                     <GridSplitter Grid.Row="1" ResizeDirection="Rows" HorizontalAlignment="Stretch"/>
 
+                    <!-- Bottom half: Build catalog -->
                     <DockPanel Grid.Row="2">
                         <TextBlock DockPanel.Dock="Top" Text="Build New Industry"
                                    FontWeight="SemiBold" Margin="0,4,0,4"/>
@@ -136,210 +165,198 @@
                 </Grid>
             </TabItem>
 
-            <!-- Market tab -->
-            <TabItem Header="Market">
-                <DockPanel Margin="8">
-                    <TextBlock DockPanel.Dock="Top" Text="Market Offers"
-                               FontWeight="SemiBold" Margin="0,0,0,6"/>
+            <!-- Trade tab: Market Offers + Contracts as sub-tabs -->
+            <TabItem Header="Trade">
+                <TabControl Margin="0,4,0,0">
 
-                    <!-- Filter bar -->
-                    <Grid DockPanel.Dock="Top"
-                          ColumnDefinitions="Auto,160,Auto,100,Auto,160"
-                          Margin="0,0,0,8">
-                        <TextBlock Grid.Column="0" Text="Resource:"
-                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <ComboBox  Grid.Column="1" ItemsSource="{Binding MarketResourceOptions}"
-                                   SelectedItem="{Binding MarketResourceFilter}"
-                                   HorizontalAlignment="Stretch" Margin="0,0,12,0"/>
-                        <TextBlock Grid.Column="2" Text="Type:"
-                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <ComboBox  Grid.Column="3" ItemsSource="{Binding MarketTypeOptions}"
-                                   SelectedItem="{Binding MarketTypeFilter}"
-                                   HorizontalAlignment="Stretch" Margin="0,0,12,0"/>
-                        <TextBlock Grid.Column="4" Text="Source:"
-                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <ComboBox  Grid.Column="5" ItemsSource="{Binding MarketSourceOptions}"
-                                   SelectedItem="{Binding MarketSourceFilter}"
-                                   HorizontalAlignment="Stretch"/>
-                    </Grid>
+                    <!-- Market Offers sub-tab -->
+                    <TabItem Header="Market Offers">
+                        <DockPanel Margin="8">
 
-                    <!-- Post new offer form -->
-                    <Border DockPanel.Dock="Bottom"
-                            Padding="0,6,0,0" Margin="0,6,0,0"
-                            BorderThickness="0,1,0,0"
-                            BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}">
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <TextBlock Text="Post Offer:" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                            <ComboBox ItemsSource="{Binding NewOffer.TypeOptions}"
-                                      SelectedItem="{Binding NewOffer.SelectedType}"
-                                      Width="70"/>
-                            <ComboBox ItemsSource="{Binding NewOffer.ResourceOptions}"
-                                      SelectedItem="{Binding NewOffer.SelectedResource}"
-                                      Width="130"/>
-                            <TextBlock Text="Qty:" VerticalAlignment="Center"/>
-                            <TextBox Text="{Binding NewOffer.QuantityText}" Width="60"/>
-                            <TextBlock Text="$/Unit:" VerticalAlignment="Center"/>
-                            <TextBox Text="{Binding NewOffer.PriceText}" Width="70"/>
-                            <TextBlock Text="Turns:" VerticalAlignment="Center"/>
-                            <TextBox Text="{Binding NewOffer.TurnsText}" Width="50"/>
-                            <Button Command="{Binding NewOffer.PostCommand}" Content="Post"
-                                    Padding="14,4"/>
-                            <TextBlock Text="{Binding NewOffer.ErrorMessage}"
-                                       Foreground="Red" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
+                            <!-- Filter bar -->
+                            <Grid DockPanel.Dock="Top"
+                                  ColumnDefinitions="Auto,160,Auto,100,Auto,160"
+                                  Margin="0,0,0,8">
+                                <TextBlock Grid.Column="0" Text="Resource:"
+                                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <ComboBox  Grid.Column="1" ItemsSource="{Binding MarketResourceOptions}"
+                                           SelectedItem="{Binding MarketResourceFilter}"
+                                           HorizontalAlignment="Stretch" Margin="0,0,12,0"/>
+                                <TextBlock Grid.Column="2" Text="Type:"
+                                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <ComboBox  Grid.Column="3" ItemsSource="{Binding MarketTypeOptions}"
+                                           SelectedItem="{Binding MarketTypeFilter}"
+                                           HorizontalAlignment="Stretch" Margin="0,0,12,0"/>
+                                <TextBlock Grid.Column="4" Text="Source:"
+                                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <ComboBox  Grid.Column="5" ItemsSource="{Binding MarketSourceOptions}"
+                                           SelectedItem="{Binding MarketSourceFilter}"
+                                           HorizontalAlignment="Stretch"/>
+                            </Grid>
 
-                    <dg:DataGrid ItemsSource="{Binding MarketOffers}"
-                                 AutoGenerateColumns="False" IsReadOnly="True"
-                                 CanUserResizeColumns="True" CanUserSortColumns="True"
-                                 GridLinesVisibility="Horizontal">
-                        <dg:DataGrid.Styles>
-                            <Style Selector="dg|DataGridRow" x:CompileBindings="False">
-                                <Setter Property="Background"
-                                        Value="{Binding CanFulfill, Converter={StaticResource FulfillableToBrushConverter}}"/>
-                            </Style>
-                        </dg:DataGrid.Styles>
-                        <dg:DataGrid.Columns>
-                            <dg:DataGridTextColumn Header="Source"       Binding="{Binding Source}"        Width="130"/>
-                            <dg:DataGridTextColumn Header="Type"         Binding="{Binding Type}"          Width="60"/>
-                            <dg:DataGridTextColumn Header="Resource"     Binding="{Binding Resource}"      Width="*"/>
-                            <dg:DataGridTextColumn Header="Quantity"     Binding="{Binding Quantity}"      Width="80"  SortMemberPath="QuantityValue"/>
-                            <dg:DataGridTextColumn Header="Price / Unit" Binding="{Binding PricePerUnit}"  Width="110" SortMemberPath="PricePerUnitValue"/>
-                            <dg:DataGridTextColumn Header="Total"        Binding="{Binding Total}"         Width="100" SortMemberPath="TotalValue"/>
-                            <dg:DataGridTextColumn Header="Expires In"   Binding="{Binding ExpiresIn}"     Width="90"  SortMemberPath="TurnsLeft"/>
-                            <dg:DataGridTemplateColumn Width="90">
-                                <dg:DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate x:DataType="vm:MarketOfferViewModel">
-                                        <Panel>
-                                            <Button Command="{Binding AcceptCommand}" Content="Accept"
-                                                    IsVisible="{Binding !IsPlayerOwned}"
-                                                    HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
-                                            <Button Command="{Binding CancelCommand}" Content="Cancel"
-                                                    IsVisible="{Binding IsPlayerOwned}"
-                                                    HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
-                                        </Panel>
-                                    </DataTemplate>
-                                </dg:DataGridTemplateColumn.CellTemplate>
-                            </dg:DataGridTemplateColumn>
-                        </dg:DataGrid.Columns>
-                    </dg:DataGrid>
-                </DockPanel>
-            </TabItem>
+                            <!-- Post new offer form -->
+                            <Border DockPanel.Dock="Bottom"
+                                    Padding="0,6,0,0" Margin="0,6,0,0"
+                                    BorderThickness="0,1,0,0"
+                                    BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}">
+                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <TextBlock Text="Post Offer:" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <ComboBox ItemsSource="{Binding NewOffer.TypeOptions}"
+                                              SelectedItem="{Binding NewOffer.SelectedType}"
+                                              Width="70"/>
+                                    <ComboBox ItemsSource="{Binding NewOffer.ResourceOptions}"
+                                              SelectedItem="{Binding NewOffer.SelectedResource}"
+                                              Width="130"/>
+                                    <TextBlock Text="Qty:" VerticalAlignment="Center"/>
+                                    <TextBox Text="{Binding NewOffer.QuantityText}" Width="60"/>
+                                    <TextBlock Text="$/Unit:" VerticalAlignment="Center"/>
+                                    <TextBox Text="{Binding NewOffer.PriceText}" Width="70"/>
+                                    <TextBlock Text="Turns:" VerticalAlignment="Center"/>
+                                    <TextBox Text="{Binding NewOffer.TurnsText}" Width="50"/>
+                                    <Button Command="{Binding NewOffer.PostCommand}" Content="Post"
+                                            Padding="14,4"/>
+                                    <TextBlock Text="{Binding NewOffer.ErrorMessage}"
+                                               Foreground="Red" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
 
-            <!-- Contracts tab -->
-            <TabItem Header="Contracts">
-                <Grid RowDefinitions="*,4,*" Margin="8">
+                            <dg:DataGrid ItemsSource="{Binding MarketOffers}"
+                                         AutoGenerateColumns="False" IsReadOnly="True"
+                                         CanUserResizeColumns="True" CanUserSortColumns="True"
+                                         GridLinesVisibility="Horizontal">
+                                <dg:DataGrid.Styles>
+                                    <Style Selector="dg|DataGridRow" x:CompileBindings="False">
+                                        <Setter Property="Background"
+                                                Value="{Binding CanFulfill, Converter={StaticResource FulfillableToBrushConverter}}"/>
+                                    </Style>
+                                </dg:DataGrid.Styles>
+                                <dg:DataGrid.Columns>
+                                    <dg:DataGridTextColumn Header="Source"       Binding="{Binding Source}"        Width="130"/>
+                                    <dg:DataGridTextColumn Header="Type"         Binding="{Binding Type}"          Width="60"/>
+                                    <dg:DataGridTextColumn Header="Resource"     Binding="{Binding Resource}"      Width="*"/>
+                                    <dg:DataGridTextColumn Header="Quantity"     Binding="{Binding Quantity}"      Width="80"  SortMemberPath="QuantityValue"/>
+                                    <dg:DataGridTextColumn Header="Price / Unit" Binding="{Binding PricePerUnit}"  Width="110" SortMemberPath="PricePerUnitValue"/>
+                                    <dg:DataGridTextColumn Header="Total"        Binding="{Binding Total}"         Width="100" SortMemberPath="TotalValue"/>
+                                    <dg:DataGridTextColumn Header="Expires In"   Binding="{Binding ExpiresIn}"     Width="90"  SortMemberPath="TurnsLeft"/>
+                                    <dg:DataGridTemplateColumn Width="90">
+                                        <dg:DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate x:DataType="vm:MarketOfferViewModel">
+                                                <Panel>
+                                                    <Button Command="{Binding AcceptCommand}" Content="Accept"
+                                                            IsVisible="{Binding !IsPlayerOwned}"
+                                                            HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
+                                                    <Button Command="{Binding CancelCommand}" Content="Cancel"
+                                                            IsVisible="{Binding IsPlayerOwned}"
+                                                            HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
+                                                </Panel>
+                                            </DataTemplate>
+                                        </dg:DataGridTemplateColumn.CellTemplate>
+                                    </dg:DataGridTemplateColumn>
+                                </dg:DataGrid.Columns>
+                            </dg:DataGrid>
+                        </DockPanel>
+                    </TabItem>
 
-                    <!-- Available contracts -->
-                    <DockPanel Grid.Row="0">
-                        <TextBlock DockPanel.Dock="Top" Text="Available Contracts"
-                                   FontWeight="SemiBold" Margin="0,0,0,4"/>
+                    <!-- Contracts sub-tab -->
+                    <TabItem Header="Contracts">
+                        <Grid RowDefinitions="*,4,*" Margin="8">
 
-                        <!-- Post new contract form -->
-                        <Border DockPanel.Dock="Bottom"
-                                Padding="0,6,0,0" Margin="0,6,0,0"
-                                BorderThickness="0,1,0,0"
-                                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}">
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <TextBlock Text="Post Contract:" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                <ComboBox ItemsSource="{Binding NewContract.TypeOptions}"
-                                          SelectedItem="{Binding NewContract.SelectedType}"
-                                          Width="70"/>
-                                <ComboBox ItemsSource="{Binding NewContract.ResourceOptions}"
-                                          SelectedItem="{Binding NewContract.SelectedResource}"
-                                          Width="130"/>
-                                <TextBlock Text="Qty/Turn:" VerticalAlignment="Center"/>
-                                <TextBox Text="{Binding NewContract.QuantityText}" Width="60"/>
-                                <TextBlock Text="$/Unit:" VerticalAlignment="Center"/>
-                                <TextBox Text="{Binding NewContract.PriceText}" Width="70"/>
-                                <TextBlock Text="Duration:" VerticalAlignment="Center"/>
-                                <TextBox Text="{Binding NewContract.DurationText}" Width="50"/>
-                                <Button Command="{Binding NewContract.PostCommand}" Content="Post"
-                                        Padding="14,4"/>
-                                <TextBlock Text="{Binding NewContract.ErrorMessage}"
-                                           Foreground="Red" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
+                            <!-- Available contracts -->
+                            <DockPanel Grid.Row="0">
+                                <TextBlock DockPanel.Dock="Top" Text="Available Contracts"
+                                           FontWeight="SemiBold" Margin="0,0,0,4"/>
 
-                        <dg:DataGrid ItemsSource="{Binding AvailableContracts}"
-                                     AutoGenerateColumns="False" IsReadOnly="True"
-                                     CanUserResizeColumns="True" CanUserSortColumns="False"
-                                     GridLinesVisibility="Horizontal">
-                            <dg:DataGrid.Styles>
-                                <Style Selector="dg|DataGridRow" x:CompileBindings="False">
-                                    <Setter Property="Background"
-                                            Value="{Binding CanFulfill, Converter={StaticResource FulfillableToBrushConverter}}"/>
-                                </Style>
-                            </dg:DataGrid.Styles>
-                            <dg:DataGrid.Columns>
-                                <dg:DataGridTextColumn Header="Source"       Binding="{Binding Source}"          Width="130"/>
-                                <dg:DataGridTextColumn Header="Type"         Binding="{Binding Type}"            Width="60"/>
-                                <dg:DataGridTextColumn Header="Resource"     Binding="{Binding Resource}"        Width="*"/>
-                                <dg:DataGridTextColumn Header="Qty / Turn"   Binding="{Binding QuantityPerTurn}" Width="90"/>
-                                <dg:DataGridTextColumn Header="Price / Unit" Binding="{Binding PricePerUnit}"    Width="110"/>
-                                <dg:DataGridTextColumn Header="Total / Turn" Binding="{Binding TotalPerTurn}"    Width="110"/>
-                                <dg:DataGridTextColumn Header="Duration"     Binding="{Binding Duration}"        Width="80"/>
-                                <dg:DataGridTextColumn Header="Expires In"   Binding="{Binding AvailableFor}"    Width="80"/>
-                                <dg:DataGridTemplateColumn Width="90">
-                                    <dg:DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate x:DataType="vm:AvailableContractViewModel">
-                                            <Panel>
-                                                <Button Command="{Binding AcceptCommand}" Content="Accept"
-                                                        IsVisible="{Binding !IsPlayerOwned}"
-                                                        HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
-                                                <Button Command="{Binding CancelCommand}" Content="Cancel"
-                                                        IsVisible="{Binding IsPlayerOwned}"
-                                                        HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
-                                            </Panel>
-                                        </DataTemplate>
-                                    </dg:DataGridTemplateColumn.CellTemplate>
-                                </dg:DataGridTemplateColumn>
-                            </dg:DataGrid.Columns>
-                        </dg:DataGrid>
-                    </DockPanel>
+                                <!-- Post new contract form -->
+                                <Border DockPanel.Dock="Bottom"
+                                        Padding="0,6,0,0" Margin="0,6,0,0"
+                                        BorderThickness="0,1,0,0"
+                                        BorderBrush="{DynamicResource SystemControlForegroundBaseMediumLowBrush}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                        <TextBlock Text="Post Contract:" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                        <ComboBox ItemsSource="{Binding NewContract.TypeOptions}"
+                                                  SelectedItem="{Binding NewContract.SelectedType}"
+                                                  Width="70"/>
+                                        <ComboBox ItemsSource="{Binding NewContract.ResourceOptions}"
+                                                  SelectedItem="{Binding NewContract.SelectedResource}"
+                                                  Width="130"/>
+                                        <TextBlock Text="Qty/Turn:" VerticalAlignment="Center"/>
+                                        <TextBox Text="{Binding NewContract.QuantityText}" Width="60"/>
+                                        <TextBlock Text="$/Unit:" VerticalAlignment="Center"/>
+                                        <TextBox Text="{Binding NewContract.PriceText}" Width="70"/>
+                                        <TextBlock Text="Duration:" VerticalAlignment="Center"/>
+                                        <TextBox Text="{Binding NewContract.DurationText}" Width="50"/>
+                                        <Button Command="{Binding NewContract.PostCommand}" Content="Post"
+                                                Padding="14,4"/>
+                                        <TextBlock Text="{Binding NewContract.ErrorMessage}"
+                                                   Foreground="Red" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
 
-                    <GridSplitter Grid.Row="1" ResizeDirection="Rows" HorizontalAlignment="Stretch"/>
+                                <dg:DataGrid ItemsSource="{Binding AvailableContracts}"
+                                             AutoGenerateColumns="False" IsReadOnly="True"
+                                             CanUserResizeColumns="True" CanUserSortColumns="False"
+                                             GridLinesVisibility="Horizontal">
+                                    <dg:DataGrid.Styles>
+                                        <Style Selector="dg|DataGridRow" x:CompileBindings="False">
+                                            <Setter Property="Background"
+                                                    Value="{Binding CanFulfill, Converter={StaticResource FulfillableToBrushConverter}}"/>
+                                        </Style>
+                                    </dg:DataGrid.Styles>
+                                    <dg:DataGrid.Columns>
+                                        <dg:DataGridTextColumn Header="Source"       Binding="{Binding Source}"          Width="130"/>
+                                        <dg:DataGridTextColumn Header="Type"         Binding="{Binding Type}"            Width="60"/>
+                                        <dg:DataGridTextColumn Header="Resource"     Binding="{Binding Resource}"        Width="*"/>
+                                        <dg:DataGridTextColumn Header="Qty / Turn"   Binding="{Binding QuantityPerTurn}" Width="90"/>
+                                        <dg:DataGridTextColumn Header="Price / Unit" Binding="{Binding PricePerUnit}"    Width="110"/>
+                                        <dg:DataGridTextColumn Header="Total / Turn" Binding="{Binding TotalPerTurn}"    Width="110"/>
+                                        <dg:DataGridTextColumn Header="Duration"     Binding="{Binding Duration}"        Width="80"/>
+                                        <dg:DataGridTextColumn Header="Expires In"   Binding="{Binding AvailableFor}"    Width="80"/>
+                                        <dg:DataGridTemplateColumn Width="90">
+                                            <dg:DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate x:DataType="vm:AvailableContractViewModel">
+                                                    <Panel>
+                                                        <Button Command="{Binding AcceptCommand}" Content="Accept"
+                                                                IsVisible="{Binding !IsPlayerOwned}"
+                                                                HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
+                                                        <Button Command="{Binding CancelCommand}" Content="Cancel"
+                                                                IsVisible="{Binding IsPlayerOwned}"
+                                                                HorizontalAlignment="Center" Padding="8,2" Margin="2"/>
+                                                    </Panel>
+                                                </DataTemplate>
+                                            </dg:DataGridTemplateColumn.CellTemplate>
+                                        </dg:DataGridTemplateColumn>
+                                    </dg:DataGrid.Columns>
+                                </dg:DataGrid>
+                            </DockPanel>
 
-                    <!-- Active contracts -->
-                    <DockPanel Grid.Row="2">
-                        <TextBlock DockPanel.Dock="Top" Text="Active Contracts"
-                                   FontWeight="SemiBold" Margin="0,4,0,4"/>
-                        <dg:DataGrid ItemsSource="{Binding ActiveContracts}"
-                                     AutoGenerateColumns="False" IsReadOnly="True"
-                                     CanUserResizeColumns="True" CanUserSortColumns="False"
-                                     GridLinesVisibility="Horizontal">
-                            <dg:DataGrid.Columns>
-                                <dg:DataGridTextColumn Header="Source"       Binding="{Binding Source}"          Width="130"/>
-                                <dg:DataGridTextColumn Header="Type"         Binding="{Binding Type}"            Width="60"/>
-                                <dg:DataGridTextColumn Header="Resource"     Binding="{Binding Resource}"        Width="*"/>
-                                <dg:DataGridTextColumn Header="Qty / Turn"   Binding="{Binding QuantityPerTurn}" Width="90"/>
-                                <dg:DataGridTextColumn Header="Price / Unit" Binding="{Binding PricePerUnit}"    Width="100"/>
-                                <dg:DataGridTextColumn Header="Total / Turn" Binding="{Binding TotalPerTurn}"    Width="100"/>
-                                <dg:DataGridTextColumn Header="Turns Left"   Binding="{Binding TurnsRemaining}"  Width="80"/>
-                                <dg:DataGridTextColumn Header="Strikes"      Binding="{Binding Strikes}"         Width="70"/>
-                                <dg:DataGridTextColumn Header="Status"       Binding="{Binding Status}"          Width="80"/>
-                            </dg:DataGrid.Columns>
-                        </dg:DataGrid>
-                    </DockPanel>
+                            <GridSplitter Grid.Row="1" ResizeDirection="Rows" HorizontalAlignment="Stretch"/>
 
-                </Grid>
-            </TabItem>
+                            <!-- Active contracts -->
+                            <DockPanel Grid.Row="2">
+                                <TextBlock DockPanel.Dock="Top" Text="Active Contracts"
+                                           FontWeight="SemiBold" Margin="0,4,0,4"/>
+                                <dg:DataGrid ItemsSource="{Binding ActiveContracts}"
+                                             AutoGenerateColumns="False" IsReadOnly="True"
+                                             CanUserResizeColumns="True" CanUserSortColumns="False"
+                                             GridLinesVisibility="Horizontal">
+                                    <dg:DataGrid.Columns>
+                                        <dg:DataGridTextColumn Header="Source"       Binding="{Binding Source}"          Width="130"/>
+                                        <dg:DataGridTextColumn Header="Type"         Binding="{Binding Type}"            Width="60"/>
+                                        <dg:DataGridTextColumn Header="Resource"     Binding="{Binding Resource}"        Width="*"/>
+                                        <dg:DataGridTextColumn Header="Qty / Turn"   Binding="{Binding QuantityPerTurn}" Width="90"/>
+                                        <dg:DataGridTextColumn Header="Price / Unit" Binding="{Binding PricePerUnit}"    Width="100"/>
+                                        <dg:DataGridTextColumn Header="Total / Turn" Binding="{Binding TotalPerTurn}"    Width="100"/>
+                                        <dg:DataGridTextColumn Header="Turns Left"   Binding="{Binding TurnsRemaining}"  Width="80"/>
+                                        <dg:DataGridTextColumn Header="Strikes"      Binding="{Binding Strikes}"         Width="70"/>
+                                        <dg:DataGridTextColumn Header="Status"       Binding="{Binding Status}"          Width="80"/>
+                                    </dg:DataGrid.Columns>
+                                </dg:DataGrid>
+                            </DockPanel>
 
-            <!-- Stockpile tab -->
-            <TabItem Header="Stockpile">
-                <DockPanel Margin="8">
-                    <TextBlock DockPanel.Dock="Top" Text="Stockpile"
-                               FontWeight="SemiBold" Margin="0,0,0,4"/>
-                    <dg:DataGrid ItemsSource="{Binding Stockpile}"
-                                 AutoGenerateColumns="False" IsReadOnly="True"
-                                 CanUserResizeColumns="True" CanUserSortColumns="False"
-                                 GridLinesVisibility="Horizontal">
-                        <dg:DataGrid.Columns>
-                            <dg:DataGridTextColumn Header="Resource" Binding="{Binding Resource}" Width="*"/>
-                            <dg:DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="120"/>
-                        </dg:DataGrid.Columns>
-                    </dg:DataGrid>
-                </DockPanel>
+                        </Grid>
+                    </TabItem>
+
+                </TabControl>
             </TabItem>
 
             <!-- Companies tab -->
@@ -393,6 +410,11 @@
             <!-- Summary tab -->
             <TabItem Header="Summary">
                 <ContentControl Content="{Binding Summary}"/>
+            </TabItem>
+
+            <!-- Market Index tab -->
+            <TabItem Header="Market Index">
+                <ContentControl Content="{Binding MarketIndex}"/>
             </TabItem>
 
             <!-- Simulation tab -->

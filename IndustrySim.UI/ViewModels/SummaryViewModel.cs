@@ -4,21 +4,18 @@ using System.Linq;
 using IndustrySim.Core.Game;
 using IndustrySim.Core.Industries;
 using IndustrySim.Core.Markets;
-using IndustrySim.Core.Models;
 
 namespace IndustrySim.UI.ViewModels;
 
 public class SummaryViewModel : ViewModelBase
 {
-    public ObservableCollection<ProductSummaryViewModel>  Products   { get; } = [];
-    public ObservableCollection<FinanceSummaryViewModel>  Finances   { get; } = [];
-    public ObservableCollection<PriceIndexViewModel>      PriceIndex { get; } = [];
+    public ObservableCollection<ProductSummaryViewModel> Products { get; } = [];
+    public ObservableCollection<FinanceSummaryViewModel> Finances { get; } = [];
 
-    public void Refresh(Player player, Market market)
+    public void Refresh(Player player)
     {
         RefreshProducts(player);
         RefreshFinances(player);
-        RefreshPriceIndex(market);
     }
 
     private void RefreshProducts(Player player)
@@ -73,7 +70,7 @@ public class SummaryViewModel : ViewModelBase
 
         var runningCosts = player.Industries
             .Where(i => i is not MineBase mine || mine.IsOpen)
-            .Sum(i => i.RunningCost);
+            .Sum(i => i.IsSuspended ? i.RunningCost * 0.1m : i.RunningCost);
 
         var contractPayments = player.ActiveContracts
             .Where(c => c.Type == OfferType.Sell)
@@ -88,14 +85,4 @@ public class SummaryViewModel : ViewModelBase
         Finances.Add(new FinanceSummaryViewModel("Net / turn",            net, isTotal: true));
     }
 
-    private void RefreshPriceIndex(Market market)
-    {
-        PriceIndex.Clear();
-        foreach (var resource in Market.BasePrices.Keys.OrderBy(r => r))
-        {
-            var price = market.PriceIndex.GetValueOrDefault(resource, Market.BasePrices[resource]);
-            var prev  = market.PreviousPriceIndex.GetValueOrDefault(resource, Market.BasePrices[resource]);
-            PriceIndex.Add(new PriceIndexViewModel(resource, price, prev));
-        }
-    }
 }

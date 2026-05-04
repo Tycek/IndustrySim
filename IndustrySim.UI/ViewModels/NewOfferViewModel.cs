@@ -11,20 +11,35 @@ namespace IndustrySim.UI.ViewModels;
 public partial class NewOfferViewModel : ViewModelBase
 {
     private readonly Func<OfferType, string, double, decimal, int, bool> _onPost;
+    private readonly Func<string, decimal> _getPrice;
 
     [ObservableProperty] private string _selectedType     = "Sell";
     [ObservableProperty] private string _selectedResource = ResourceNames.Coal;
     [ObservableProperty] private string _quantityText     = "10";
-    [ObservableProperty] private string _priceText        = "5.00";
+    [ObservableProperty] private string _priceText        = string.Empty;
     [ObservableProperty] private string _turnsText        = "5";
     [ObservableProperty] private string _errorMessage     = string.Empty;
 
     public IReadOnlyList<string> TypeOptions     { get; } = ["Sell", "Buy"];
     public IReadOnlyList<string> ResourceOptions { get; } =
-        [ResourceNames.Coal, ResourceNames.IronOre, ResourceNames.CoalCoke, ResourceNames.SteelIngot];
+    [
+        ResourceNames.Coal, ResourceNames.IronOre, ResourceNames.CoalCoke, ResourceNames.SteelIngot,
+        ResourceNames.SteelWire, ResourceNames.SteelBar, ResourceNames.SteelPlate,
+        ResourceNames.CopperOre, ResourceNames.CopperIngot, ResourceNames.CopperWire, ResourceNames.CopperPipe,
+        ResourceNames.CrudeOil, ResourceNames.Gas, ResourceNames.Diesel, ResourceNames.Kerosene,
+        ResourceNames.Chemicals, ResourceNames.PlasticResin, ResourceNames.Fertiliser,
+        ResourceNames.SyntheticRubber, ResourceNames.Plastics,
+    ];
 
-    public NewOfferViewModel(Func<OfferType, string, double, decimal, int, bool> onPost) =>
-        _onPost = onPost;
+    public NewOfferViewModel(Func<OfferType, string, double, decimal, int, bool> onPost, Func<string, decimal> getPrice)
+    {
+        _onPost   = onPost;
+        _getPrice = getPrice;
+        PriceText = _getPrice(SelectedResource).ToString("F2", CultureInfo.InvariantCulture);
+    }
+
+    partial void OnSelectedResourceChanged(string value) =>
+        PriceText = _getPrice(value).ToString("F2", CultureInfo.InvariantCulture);
 
     [RelayCommand]
     private void Post()

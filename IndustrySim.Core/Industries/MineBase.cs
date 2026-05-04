@@ -27,7 +27,7 @@ public abstract class MineBase : IndustryBase
 
     public override IReadOnlyList<Resource> Process(IReadOnlyDictionary<string, double> availableResources)
     {
-        if (Capacity <= 0)
+        if (IsSuspended || Capacity <= 0)
             return [];
 
         var baseOutput = BaseOutput;

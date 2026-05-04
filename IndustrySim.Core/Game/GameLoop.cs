@@ -36,6 +36,16 @@ public class GameLoop
     public void RemoveIndustry(IIndustry industry) =>
         State.Player.Industries.Remove(industry);
 
+    public void SuspendIndustry(IIndustry industry)
+    {
+        if (industry is IndustryBase b) b.Suspend();
+    }
+
+    public void ResumeIndustry(IIndustry industry)
+    {
+        if (industry is IndustryBase b) b.Resume();
+    }
+
     // ── Player market actions ────────────────────────────────────────────────
 
     /// <summary>
@@ -341,12 +351,12 @@ public class GameLoop
             }
         }
 
-        // Deduct running costs. Closed mines cost nothing.
+        // Deduct running costs. Closed mines cost nothing; suspended industries pay 10%.
         foreach (var industry in State.Player.Industries)
         {
             if (industry is MineBase mine && !mine.IsOpen)
                 continue;
-            State.Player.Balance -= industry.RunningCost;
+            State.Player.Balance -= industry.IsSuspended ? industry.RunningCost * 0.1m : industry.RunningCost;
         }
 
         // Compute offer/contract pressure and drift the price index.

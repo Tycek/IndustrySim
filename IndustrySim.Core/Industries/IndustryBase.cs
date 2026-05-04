@@ -14,8 +14,15 @@ public abstract class IndustryBase : IIndustry
     public abstract IReadOnlyList<Resource> InputsRequired { get; }
     public abstract IReadOnlyList<Resource> OutputsProduced { get; }
 
+    public bool IsSuspended { get; private set; }
+
+    public void Suspend() => IsSuspended = true;
+    public void Resume()  => IsSuspended = false;
+
     public virtual IReadOnlyList<Resource> Process(IReadOnlyDictionary<string, double> availableResources)
     {
+        if (IsSuspended) return [];
+
         foreach (var input in InputsRequired)
         {
             if (!availableResources.TryGetValue(input.Name, out var qty) || qty < input.Quantity)

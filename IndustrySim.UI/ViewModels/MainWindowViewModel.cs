@@ -46,6 +46,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public ObservableCollection<AiCompanyViewModel>          AiCompanies        { get; } = [];
     public IReadOnlyList<CatalogIndustryViewModel>           Catalog            { get; }
     public SummaryViewModel                                  Summary            { get; } = new();
+    public MarketIndexViewModel                              MarketIndex        { get; } = new();
     public SimulationViewModel                               Simulation         { get; } = new();
     public NewOfferViewModel                                 NewOffer           { get; }
     public NewContractViewModel                              NewContract        { get; }
@@ -54,8 +55,8 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         _loop = GameLoop.StartNew("Player 1");
 
-        NewOffer    = new NewOfferViewModel(PostOffer);
-        NewContract = new NewContractViewModel(PostContract);
+        NewOffer    = new NewOfferViewModel(PostOffer,    GetFairPrice);
+        NewContract = new NewContractViewModel(PostContract, GetFairPrice);
 
         Catalog =
         [
@@ -118,6 +119,18 @@ public partial class MainWindowViewModel : ViewModelBase
     private void CloseIndustry(IIndustry industry)
     {
         _loop.RemoveIndustry(industry);
+        RefreshState();
+    }
+
+    private void SuspendIndustry(IIndustry industry)
+    {
+        _loop.SuspendIndustry(industry);
+        RefreshState();
+    }
+
+    private void ResumeIndustry(IIndustry industry)
+    {
+        _loop.ResumeIndustry(industry);
         RefreshState();
     }
 
@@ -196,6 +209,9 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private decimal GetFairPrice(string resource) =>
+        _loop.State.Market.PriceIndex.GetValueOrDefault(resource, Market.BasePrices.GetValueOrDefault(resource, 0m));
+
     private void RefreshState()
     {
         var player     = _loop.State.Player;
@@ -207,7 +223,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
         PlayerIndustries.Clear();
         foreach (var industry in player.Industries)
-            PlayerIndustries.Add(new OwnedIndustryViewModel(industry, CloseIndustry));
+            PlayerIndustries.Add(new OwnedIndustryViewModel(industry, CloseIndustry, SuspendIndustry, ResumeIndustry));
 
         _rawMarketOffers.Clear();
         foreach (var offer in _loop.State.Market.Offers)
@@ -248,6 +264,7 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var company in _loop.State.AiCompanies)
             AiCompanies.Add(new AiCompanyViewModel(company));
 
-        Summary.Refresh(player, _loop.State.Market);
+        Summary.Refresh(player);
+        MarketIndex.Refresh(_loop.State.Market);
     }
 }

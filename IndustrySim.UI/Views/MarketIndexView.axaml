@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:IndustrySim.UI.ViewModels"
+             xmlns:dg="clr-namespace:Avalonia.Controls;assembly=Avalonia.Controls.DataGrid"
+             x:Class="IndustrySim.UI.Views.MarketIndexView"
+             x:DataType="vm:MarketIndexViewModel">
+
+    <DockPanel Margin="8">
+        <TextBlock DockPanel.Dock="Top" Text="Market Price Index"
+                   FontWeight="SemiBold" Margin="0,0,0,4"/>
+        <TextBlock DockPanel.Dock="Top"
+                   Text="Fair price per resource based on visible offer and contract activity. Low/High covers up to the last 10 turns."
+                   FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,0,0,8"/>
+        <dg:DataGrid ItemsSource="{Binding Rows}"
+                     AutoGenerateColumns="False" IsReadOnly="True"
+                     CanUserResizeColumns="True" CanUserSortColumns="True"
+                     GridLinesVisibility="Horizontal">
+            <dg:DataGrid.Columns>
+                <dg:DataGridTextColumn Header="Resource"   Binding="{Binding Resource}" Width="*"/>
+                <dg:DataGridTextColumn Header="Current"   Binding="{Binding Current}"  Width="110" SortMemberPath="CurrentValue"/>
+                <dg:DataGridTextColumn Header="Last Turn" Binding="{Binding LastTurn}" Width="110" SortMemberPath="LastTurnValue"/>
+                <dg:DataGridTextColumn Header="Low (10T)" Binding="{Binding Low10T}"   Width="110" SortMemberPath="Low10TValue"/>
+                <dg:DataGridTextColumn Header="High (10T)" Binding="{Binding High10T}" Width="110" SortMemberPath="High10TValue"/>
+                <dg:DataGridTextColumn Header="Trend"     Binding="{Binding Trend}"    Width="70"/>
+            </dg:DataGrid.Columns>
+        </dg:DataGrid>
+    </DockPanel>
+
+</UserControl>
