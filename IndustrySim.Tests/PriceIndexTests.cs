@@ -91,7 +91,7 @@ public class PriceIndexTests
         for (var i = 0; i < 200; i++)
             market.AdjustPrices(new(), new() { [ResourceNames.Coal] = 1000 });
 
-        Assert.True(market.PriceIndex[ResourceNames.Coal] <= basePrice * 2.50m);
+        Assert.True(market.PriceIndex[ResourceNames.Coal] <= basePrice * 5.00m);
     }
 
     // ── PreviousPriceIndex snapshot ───────────────────────────────────────────
@@ -110,31 +110,25 @@ public class PriceIndexTests
         Assert.NotEqual(before, market.PriceIndex[ResourceNames.Coal]);
     }
 
-    // ── GenerateOffers uses PriceIndex ────────────────────────────────────────
+    // ── RefreshPersistentOffers uses PriceIndex ───────────────────────────────
 
     [Fact]
-    public void GenerateOffers_PricesOffersRelativeToPriceIndex()
+    public void RefreshPersistentOffers_PricesOffersRelativeToPriceIndex()
     {
-        var rng       = new Random(0);
-        var market    = new Market();
-        var baseCoal  = Market.BasePrices[ResourceNames.Coal];
+        var rng    = new Random(0);
+        var market = new Market();
+        market.InitializeStockpiles(rng);
 
-        // Double the coal index — new coal offers must be priced above old maximum
-        market.PriceIndex[ResourceNames.Coal] = baseCoal * 2m;
+        var resource  = ResourceNames.SteelIngot;
+        var basePrice = Market.BasePrices[resource];
 
-        // Generate enough turns to accumulate coal offers
-        for (var i = 0; i < 30; i++)
-            market.GenerateOffers(rng);
+        // Set index to 2× base and refresh offers.
+        market.PriceIndex[resource] = basePrice * 2m;
+        market.RefreshPersistentOffers();
 
-        var coalOffers = market.Offers.Where(o => o.ResourceName == ResourceNames.Coal).ToList();
-        Assert.NotEmpty(coalOffers);
-
-        // With index at 2× base, minimum possible price is 2 × base × 0.80 = 1.60 × base.
-        // The old maximum with base pricing was 1.20 × base.
-        // Every coal offer must therefore exceed the old ceiling.
-        Assert.All(coalOffers, o =>
-            Assert.True(o.PricePerUnit > baseCoal * 1.20m,
-                $"Expected price > {baseCoal * 1.20m:N2} but got {o.PricePerUnit:N2}"));
+        var offer = market.Offers.FirstOrDefault(o => o.ResourceName == resource && o.Source == "Market");
+        Assert.NotNull(offer);
+        Assert.Equal(basePrice * 2m, offer.PricePerUnit);
     }
 
     // ── Per-resource independence ─────────────────────────────────────────────

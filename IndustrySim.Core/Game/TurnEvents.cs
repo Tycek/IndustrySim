@@ -5,4 +5,5 @@ public record TurnEvents(
     IReadOnlyList<string> DepletedMines,
     IReadOnlyList<string> CancelledContracts,
     IReadOnlyList<string> NewAiCompanies,
-    IReadOnlyList<string> BankruptAiCompanies);
+    IReadOnlyList<string> BankruptAiCompanies,
+    IReadOnlyList<string> MarketEvents);

@@ -234,29 +234,63 @@ public class AiCompany : IMarketParticipant
                 poster.Balance += offer.TotalPrice;
 
             market.Offers.Remove(offer);
-            surplus[offer.ResourceName] = net + offer.Quantity;
+            // Cap at 0: a one-time purchase fills inventory but doesn't create a production surplus.
+            // Without this, buying 10 coal coke to cover a -1/turn deficit would show net=+9
+            // and PostToMarket would immediately re-sell the purchased stock.
+            surplus[offer.ResourceName] = Math.Min(0.0, net + offer.Quantity);
         }
 
         // Accept Buy offers (we sell our surplus resources).
         foreach (var offer in market.Offers
             .Where(o => o.Type == OfferType.Buy && o.Source != Name).ToList())
         {
-            var net = surplus.GetValueOrDefault(offer.ResourceName);
-            if (net <= 0) continue;
+            var net         = surplus.GetValueOrDefault(offer.ResourceName);
+            var inInventory = Inventory.GetValueOrDefault(offer.ResourceName);
+            // Also sell stranded outputs: inventory of a resource that is not an input to any
+            // of our own industries (e.g. SteelIngots when the smelter has lost its supply).
+            var isNeededAsInput = Industries.Any(i => i.InputsRequired.Any(r => r.Name == offer.ResourceName));
+            if (net <= 0 && (inInventory <= 0 || isNeededAsInput)) continue;
+
             var basePrice = market.PriceIndex.GetValueOrDefault(offer.ResourceName, 10m);
             if (offer.PricePerUnit < basePrice * 0.85m) continue;
-            var inInventory = Inventory.GetValueOrDefault(offer.ResourceName);
-            if (inInventory < offer.Quantity) continue;
 
-            Inventory[offer.ResourceName] = inInventory - offer.Quantity;
-            Balance += offer.TotalPrice;
+            double amountToSell;
+            if (offer.Source == "Market")
+            {
+                // Market buy offers support partial fulfillment.
+                amountToSell = Math.Min(inInventory, offer.Quantity);
+                if (amountToSell <= 0) continue;
+            }
+            else
+            {
+                if (inInventory < offer.Quantity) continue;
+                amountToSell = offer.Quantity;
+            }
 
-            // Credit the poster (their money was pre-committed; now they receive the resources).
-            if (offer.Source != "Market" && participants.TryGetValue(offer.Source, out var poster))
-                poster.AddToInventory(new Resource(offer.ResourceName, offer.Quantity));
+            Inventory[offer.ResourceName] = inInventory - amountToSell;
+            Balance += (decimal)amountToSell * offer.PricePerUnit;
 
-            market.Offers.Remove(offer);
-            surplus[offer.ResourceName] = net - offer.Quantity;
+            if (offer.Source == "Market")
+            {
+                market.RecordSaleToMarket(offer.ResourceName, amountToSell);
+                // Re-add the offer with reduced quantity so other companies can still sell
+                // to the same gap in the same turn (same pattern as player-side TryAcceptOffer).
+                market.Offers.Remove(offer);
+                offer.Quantity -= amountToSell;
+                if (offer.Quantity > 0)
+                    market.Offers.Add(offer);
+            }
+            else
+            {
+                market.Offers.Remove(offer);
+                if (participants.TryGetValue(offer.Source, out var poster))
+                    poster.AddToInventory(new Resource(offer.ResourceName, amountToSell));
+            }
+
+            // Cap at 0: selling from inventory doesn't create a sustained flow deficit.
+            // Without this, selling 10 units when net=1 would set surplus=-9 and cause
+            // PostToMarket to immediately post a buy offer for the same resource.
+            surplus[offer.ResourceName] = Math.Max(0.0, net - amountToSell);
         }
     }
 
@@ -342,7 +376,7 @@ public class AiCompany : IMarketParticipant
                     });
                 }
             }
-            else if (net < -2 && rng.NextDouble() < 0.25)
+            else if (net < 0 && rng.NextDouble() < 0.60)
             {
                 var qty = (int)(Math.Round(Math.Min(-net, 50) / 5) * 5);
                 qty = Math.Max(qty, 5);
@@ -434,9 +468,16 @@ public class AiCompany : IMarketParticipant
         if (rng.NextDouble() >= BuildProbability) return;
 
         var netBalance = AiCompanyGenerator.ComputeNetBalance(allCompanies, player);
+
+        // Only consider industries whose output revenue exceeds their operating cost at
+        // current prices. Input opportunity costs are excluded because AI companies build
+        // vertically integrated chains and produce their own inputs.
         var candidates = AiCompanyGenerator.AllFactories
             .Select(f => (Factory: f, Score: AiCompanyGenerator.Score(f, netBalance)))
+            .Where(c => ComputeExpectedMargin(c.Factory(), priceIndex) > 0)
             .ToList();
+
+        if (candidates.Count == 0) return;
 
         var chosen   = AiCompanyGenerator.WeightedPick(candidates, rng);
         var industry = chosen.Factory();
@@ -445,5 +486,14 @@ public class AiCompany : IMarketParticipant
 
         Balance -= industry.BuildCost;
         Industries.Add(industry);
+    }
+
+    // Revenue from outputs minus running cost only. Input opportunity costs are excluded
+    // because AI companies source inputs internally from their own supply chain.
+    private static decimal ComputeExpectedMargin(IIndustry industry, IReadOnlyDictionary<string, decimal> priceIndex)
+    {
+        var revenue = industry.OutputsProduced.Sum(o =>
+            (decimal)o.Quantity * priceIndex.GetValueOrDefault(o.Name, 0m));
+        return revenue - industry.RunningCost;
     }
 }

@@ -25,7 +25,10 @@ public class GameLoop
             Player = new Player { Name = playerName, Balance = startingBalance }
         };
 
-        var initialCount = Random.Shared.Next(2, 7); // 2–4 companies at game start
+        state.Market.InitializeStockpiles(Random.Shared);
+        state.Market.RefreshPersistentOffers();
+
+        var initialCount = Random.Shared.Next(2, 7);
         state.AiCompanies.AddRange(
             AiCompanyGenerator.GenerateInitial(initialCount, Random.Shared, state.Player));
 
@@ -139,7 +142,6 @@ public class GameLoop
 
         var participants = BuildParticipantsLookup();
 
-        // Verify the poster can actually fulfil the first turn before committing.
         if (contract.Source != "Market" && participants.TryGetValue(contract.Source, out var poster))
         {
             if (contract.Type == OfferType.Sell &&
@@ -167,9 +169,10 @@ public class GameLoop
     /// Sell offers (poster/market sells): player pays and receives the resource.
     /// Buy offers (poster/market buys): player loses the resource and receives payment.
     /// For bilateral offers, credits the poster's balance or inventory accordingly.
+    /// For market buy offers, also records the sale to the market stockpile.
     /// Returns false if the offer no longer exists or the player cannot fulfil it.
     /// </summary>
-    public bool TryAcceptOffer(MarketOffer offer)
+    public bool TryAcceptOffer(MarketOffer offer, double? sellQuantity = null)
     {
         if (!State.Market.Offers.Remove(offer))
             return false;
@@ -186,21 +189,45 @@ public class GameLoop
             }
             State.Player.Balance -= offer.TotalPrice;
             State.Player.AddToInventory(new Resource(offer.ResourceName, offer.Quantity));
-            // Resources were pre-committed at post time; poster now receives the payment.
             if (isBilateral) participants[offer.Source].Balance += offer.TotalPrice;
         }
         else // Buy — poster buys from player
         {
             var available = State.Player.Inventory.GetValueOrDefault(offer.ResourceName);
-            if (available < offer.Quantity)
+            double amountToSell;
+            if (offer.Source == "Market")
             {
-                State.Market.Offers.Add(offer);
-                return false;
+                // Market buy offers support partial fulfillment and a player-chosen quantity.
+                var requested = sellQuantity.HasValue ? Math.Min(sellQuantity.Value, offer.Quantity) : available;
+                amountToSell = Math.Clamp(requested, 0, Math.Min(available, offer.Quantity));
+                if (amountToSell <= 0)
+                {
+                    State.Market.Offers.Add(offer);
+                    return false;
+                }
             }
-            State.Player.Inventory[offer.ResourceName] = available - offer.Quantity;
-            State.Player.Balance += offer.TotalPrice;
-            // Money was pre-committed at post time; poster now receives the resources.
-            if (isBilateral) participants[offer.Source].AddToInventory(new Resource(offer.ResourceName, offer.Quantity));
+            else
+            {
+                if (available < offer.Quantity)
+                {
+                    State.Market.Offers.Add(offer);
+                    return false;
+                }
+                amountToSell = offer.Quantity;
+            }
+            State.Player.Inventory[offer.ResourceName] = available - amountToSell;
+            State.Player.Balance += (decimal)amountToSell * offer.PricePerUnit;
+
+            if (offer.Source == "Market")
+            {
+                State.Market.RecordSaleToMarket(offer.ResourceName, amountToSell);
+                // Keep the offer alive with the remaining gap so the player can sell more.
+                offer.Quantity -= amountToSell;
+                if (offer.Quantity > 0)
+                    State.Market.Offers.Add(offer);
+            }
+            else if (isBilateral)
+                participants[offer.Source].AddToInventory(new Resource(offer.ResourceName, amountToSell));
         }
 
         return true;
@@ -224,11 +251,14 @@ public class GameLoop
 
     /// <summary>
     /// Advances the game by one turn.
-    /// Returns events that occurred (depleted mines, cancelled contracts).
+    /// Returns events that occurred (depleted mines, cancelled contracts, market events, etc.).
     /// </summary>
     public TurnEvents ProcessTurn()
     {
         State.TurnNumber++;
+
+        // Tick stockpiles (consume baseline demand, grow capacity, apply events).
+        State.Market.TickStockpiles();
 
         var participants = BuildParticipantsLookup();
 
@@ -281,7 +311,6 @@ public class GameLoop
         var cancelledContracts = new List<string>();
         foreach (var contract in State.Player.ActiveContracts.ToList())
         {
-            // Mirror contracts are display-only; just tick them down.
             if (contract.IsCounterpartyView)
             {
                 contract.TurnsRemaining--;
@@ -359,18 +388,28 @@ public class GameLoop
             State.Player.Balance -= industry.IsSuspended ? industry.RunningCost * 0.1m : industry.RunningCost;
         }
 
-        // Compute offer/contract pressure and drift the price index.
-        var (sellPressure, buyPressure) = ComputeMarketPressure(participants);
-        State.Market.AdjustPrices(sellPressure, buyPressure);
+        // Combine offer-activity pressure with stockpile fill-ratio pressure, then drift prices.
+        var (offerSell, offerBuy)     = ComputeOfferPressure(participants);
+        var (stockpileBuy, stockpileSell) = State.Market.ComputeStockpilePressure();
 
-        // Expire stale offers, refund pre-committed funds, then generate new offers using
-        // the freshly adjusted price index.
-        var expiredOffers = State.Market.GenerateOffers(_rng);
+        foreach (var (r, v) in stockpileBuy)  offerBuy[r]  = offerBuy.GetValueOrDefault(r) + v;
+        foreach (var (r, v) in stockpileSell) offerSell[r] = offerSell.GetValueOrDefault(r) + v;
+
+        State.Market.AdjustPrices(offerSell, offerBuy);
+
+        // Expire stale non-market offers, refund pre-committed funds, tick contracts.
+        var expiredOffers = State.Market.TickOffers(_rng);
         RefundExpiredOffers(expiredOffers, participants);
+
+        // Rebuild persistent market buy offers at the freshly updated prices.
+        State.Market.RefreshPersistentOffers();
+
+        // Roll for a random market event.
+        // var marketEventDescriptions = TryGenerateMarketEvent();
 
         var bankruptCompanies = DissolveInsolventAiCompanies(participants);
 
-        return new TurnEvents(depletedThisTurn, cancelledContracts, newAiCompanies, bankruptCompanies);
+        return new TurnEvents(depletedThisTurn, cancelledContracts, newAiCompanies, bankruptCompanies, []);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -410,16 +449,10 @@ public class GameLoop
     }
 
     /// <summary>
-    /// Dissolves AI companies whose balance has fallen below the insolvency threshold
-    /// (the greater of 3× monthly running costs or $500). Cancels all their market
-    /// presence and removes any active contracts they hold with other participants.
-    /// No penalty is charged to the player or counterparties — the company is simply gone.
-    /// </summary>
-    /// <summary>
     /// Sums current one-time offer quantities and active Buy-contract quantities per resource
     /// to produce the sell and buy pressure signals used by <see cref="Market.AdjustPrices"/>.
     /// </summary>
-    private (Dictionary<string, double> sell, Dictionary<string, double> buy) ComputeMarketPressure(
+    private (Dictionary<string, double> sell, Dictionary<string, double> buy) ComputeOfferPressure(
         IReadOnlyDictionary<string, IMarketParticipant> participants)
     {
         var sell = new Dictionary<string, double>();
@@ -427,6 +460,10 @@ public class GameLoop
 
         foreach (var offer in State.Market.Offers)
         {
+            // Exclude the persistent market buy offers — their pressure comes from the
+            // stockpile fill ratio via ComputeStockpilePressure, not from offer counts.
+            if (offer.Source == "Market") continue;
+
             if (offer.Type == OfferType.Sell)
                 sell[offer.ResourceName] = sell.GetValueOrDefault(offer.ResourceName) + offer.Quantity;
             else
@@ -439,6 +476,44 @@ public class GameLoop
 
         return (sell, buy);
     }
+
+    // ── Random market events ─────────────────────────────────────────────────
+
+    // (description, resource, shiftPerTurn, minDuration, maxDuration)
+    private static readonly (string Desc, string Resource, double Shift, int MinDur, int MaxDur)[] EventTable =
+    [
+        ("Construction boom",          ResourceNames.SteelIngot,      -8,  8, 12),
+        ("Infrastructure drive",       ResourceNames.SteelPlate,      -6,  6, 10),
+        ("Electrical grid expansion",  ResourceNames.CopperWire,      -5,  8, 15),
+        ("Oil glut",                   ResourceNames.Diesel,         +10,  5,  8),
+        ("Oil glut",                   ResourceNames.Kerosene,       +10,  5,  8),
+        ("Oil glut",                   ResourceNames.Gas,            + 8,  5,  8),
+        ("Plastics surplus",           ResourceNames.Plastics,       +10,  4,  7),
+        ("Chemical plant shutdown",    ResourceNames.Chemicals,       -6,  5, 10),
+        ("Fertiliser demand spike",    ResourceNames.Fertiliser,      -5,  6, 10),
+        ("Copper wire shortage",       ResourceNames.CopperWire,      -4,  5,  9),
+        ("Synthetic rubber shortage",  ResourceNames.SyntheticRubber, -4,  5,  9),
+    ];
+
+    private List<string> TryGenerateMarketEvent()
+    {
+        if (_rng.NextDouble() >= 0.05) return []; // 5 % chance per turn
+
+        var (desc, resource, shift, minDur, maxDur) = EventTable[_rng.Next(EventTable.Length)];
+        var duration = _rng.Next(minDur, maxDur + 1);
+
+        State.Market.ActiveEvents.Add(new MarketEvent
+        {
+            ResourceName         = resource,
+            StockpileShiftPerTurn = shift,
+            TurnsRemaining       = duration,
+            Description          = desc,
+        });
+
+        return [$"Market event: {desc} ({resource}, {duration} turns)."];
+    }
+
+    // ── AI company dissolution ───────────────────────────────────────────────
 
     private List<string> DissolveInsolventAiCompanies(
         IReadOnlyDictionary<string, IMarketParticipant> participants)
@@ -454,15 +529,9 @@ public class GameLoop
 
             if (ai.Balance > threshold) continue;
 
-            // Remove all market offers posted by this AI (pre-committed resources/money forfeited).
             State.Market.Offers.RemoveAll(o => o.Source == ai.Name);
-
-            // Remove all available contracts posted by this AI.
             State.Market.AvailableContracts.RemoveAll(c => c.Source == ai.Name);
 
-            // Remove all active contracts referencing this AI from every other participant.
-            // This covers: (a) contracts the AI posted that others accepted (Source == ai.Name),
-            // and (b) mirrors the AI holds that belong to the other participant's original contract.
             foreach (var (name, participant) in participants)
             {
                 if (name == ai.Name) continue;

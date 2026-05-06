@@ -134,9 +134,9 @@ public partial class MainWindowViewModel : ViewModelBase
         RefreshState();
     }
 
-    private void AcceptOffer(MarketOffer offer)
+    private void AcceptOffer(MarketOffer offer, double quantity)
     {
-        _loop.TryAcceptOffer(offer);
+        _loop.TryAcceptOffer(offer, quantity);
         RefreshState();
     }
 
@@ -198,6 +198,9 @@ public partial class MainWindowViewModel : ViewModelBase
         foreach (var company in events.BankruptAiCompanies)
             lines.Add($"{company} has gone bankrupt and left the market.");
 
+        /*foreach (var evt in events.MarketEvents)
+            lines.Add(evt);*/
+
         if (lines.Count > 0)
         {
             Notification    = string.Join('\n', lines);
@@ -228,12 +231,15 @@ public partial class MainWindowViewModel : ViewModelBase
         _rawMarketOffers.Clear();
         foreach (var offer in _loop.State.Market.Offers)
         {
+            var availableToSell = player.Inventory.GetValueOrDefault(offer.ResourceName);
             var canFulfill = offer.Type == OfferType.Buy
-                ? player.Inventory.GetValueOrDefault(offer.ResourceName) >= offer.Quantity
+                ? offer.Source == "Market"
+                    ? availableToSell > 0
+                    : availableToSell >= offer.Quantity
                 : player.Balance >= offer.TotalPrice;
             var isPlayerOwned = offer.Source == playerName;
             var fairPrice     = _loop.State.Market.PriceIndex.GetValueOrDefault(offer.ResourceName, 0m);
-            _rawMarketOffers.Add(new MarketOfferViewModel(offer, canFulfill, isPlayerOwned, fairPrice, AcceptOffer, CancelOffer));
+            _rawMarketOffers.Add(new MarketOfferViewModel(offer, canFulfill, isPlayerOwned, fairPrice, availableToSell, AcceptOffer, CancelOffer));
         }
         ApplyMarketFilter();
 
