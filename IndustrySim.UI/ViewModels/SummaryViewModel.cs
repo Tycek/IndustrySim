@@ -28,6 +28,7 @@ public class SummaryViewModel : ViewModelBase
         foreach (var industry in player.Industries)
         {
             if (industry is MineBase mine && !mine.IsOpen) continue;
+            if (industry.IsSuspended) continue;
 
             foreach (var output in industry.OutputsProduced)
                 produced[output.Name] = produced.GetValueOrDefault(output.Name) + output.Quantity;

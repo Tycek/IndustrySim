@@ -264,7 +264,18 @@
                     </TabItem>
 
                     <!-- Contracts sub-tab -->
-                    <TabItem Header="Contracts">
+                    <TabItem>
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <TextBlock Text="Contracts" VerticalAlignment="Center"/>
+                                <Border Background="#4A90D9" CornerRadius="8" Padding="5,1"
+                                        IsVisible="{Binding HasAvailableContracts}"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding AvailableContractCount}"
+                                               Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                </Border>
+                            </StackPanel>
+                        </TabItem.Header>
                         <Grid RowDefinitions="*,4,*" Margin="8">
 
                             <!-- Available contracts -->

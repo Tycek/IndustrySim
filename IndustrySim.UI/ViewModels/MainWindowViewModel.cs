@@ -16,11 +16,13 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly GameLoop _loop;
     private readonly List<MarketOfferViewModel> _rawMarketOffers = [];
 
-    [ObservableProperty] private string _playerName      = string.Empty;
-    [ObservableProperty] private string _balanceText     = string.Empty;
-    [ObservableProperty] private string _turnText        = string.Empty;
-    [ObservableProperty] private string _notification    = string.Empty;
-    [ObservableProperty] private bool   _hasNotification = false;
+    [ObservableProperty] private string _playerName             = string.Empty;
+    [ObservableProperty] private string _balanceText            = string.Empty;
+    [ObservableProperty] private string _turnText               = string.Empty;
+    [ObservableProperty] private string _notification           = string.Empty;
+    [ObservableProperty] private bool   _hasNotification        = false;
+    [ObservableProperty] private int    _availableContractCount = 0;
+    [ObservableProperty] private bool   _hasAvailableContracts  = false;
 
     // Market filters
     [ObservableProperty] private string _marketResourceFilter = "All";
@@ -256,6 +258,10 @@ public partial class MainWindowViewModel : ViewModelBase
             var isPlayerOwned = contract.Source == playerName;
             AvailableContracts.Add(new AvailableContractViewModel(contract, canFulfill, isPlayerOwned, AcceptContract, CancelContract));
         }
+
+        var nonPlayerContractCount = _loop.State.Market.AvailableContracts.Count(c => c.Source != playerName);
+        AvailableContractCount = nonPlayerContractCount;
+        HasAvailableContracts  = nonPlayerContractCount > 0;
 
         ActiveContracts.Clear();
         foreach (var contract in player.ActiveContracts)

@@ -222,6 +222,7 @@ public class AiCompany : IMarketParticipant
         {
             var net = surplus.GetValueOrDefault(offer.ResourceName);
             if (net >= 0) continue;
+            if (StockpileCoversDeficit(offer.ResourceName, net)) continue;
             var basePrice = market.PriceIndex.GetValueOrDefault(offer.ResourceName, 10m);
             if (offer.PricePerUnit > basePrice * 1.15m) continue;
             if (Balance < offer.TotalPrice) continue;
@@ -329,6 +330,7 @@ public class AiCompany : IMarketParticipant
         {
             var net = surplus.GetValueOrDefault(contract.ResourceName);
             if (net >= 0) continue;
+            if (StockpileCoversDeficit(contract.ResourceName, net)) continue;
             var basePrice = market.PriceIndex.GetValueOrDefault(contract.ResourceName, 10m);
             if (contract.PricePerUnit > basePrice * 1.15m) continue;
             if (Balance < contract.TotalPerTurn * contract.DurationTurns) continue;
@@ -376,7 +378,7 @@ public class AiCompany : IMarketParticipant
                     });
                 }
             }
-            else if (net < 0 && rng.NextDouble() < 0.60)
+            else if (net < 0 && !StockpileCoversDeficit(resource, net) && rng.NextDouble() < 0.60)
             {
                 var qty = (int)(Math.Round(Math.Min(-net, 50) / 5) * 5);
                 qty = Math.Max(qty, 5);
@@ -424,7 +426,7 @@ public class AiCompany : IMarketParticipant
                     return;
                 }
             }
-            else if (net < -5)
+            else if (net < -5 && !StockpileCoversDeficit(resource, net))
             {
                 // Deficit: AI buys what it needs — acceptor delivers and receives payment.
                 var qty = (int)(Math.Round(Math.Min(-net, 20) / 5) * 5);
@@ -443,6 +445,12 @@ public class AiCompany : IMarketParticipant
             }
         }
     }
+
+    private const double StockpileBufferTurns = 50.0;
+
+    /// <summary>True when the current inventory covers the per-turn deficit for 50+ turns.</summary>
+    private bool StockpileCoversDeficit(string resource, double net) =>
+        Inventory.GetValueOrDefault(resource) / (-net) >= StockpileBufferTurns;
 
     // ── Mid-game industry building ────────────────────────────────────────────
 
