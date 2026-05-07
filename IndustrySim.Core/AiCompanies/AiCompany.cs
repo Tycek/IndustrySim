@@ -467,11 +467,14 @@ public class AiCompany : IMarketParticipant
         IReadOnlyDictionary<string, decimal> priceIndex,
         IReadOnlyList<AiCompany> allCompanies,
         Player player,
-        Random rng)
+        Random rng,
+        IReadOnlyDictionary<string, double> fillRatios)
     {
         var hasShortage = priceIndex.Any(kv =>
             Market.BasePrices.TryGetValue(kv.Key, out var basePrice) && kv.Value >= basePrice * ShortageThreshold);
-        if (!hasShortage) return;
+        // Also trigger when any market stockpile is critically low, even before prices spike.
+        var hasStockpileShortage = fillRatios.Any(kv => kv.Value < 0.30);
+        if (!hasShortage && !hasStockpileShortage) return;
 
         if (rng.NextDouble() >= BuildProbability) return;
 
@@ -481,7 +484,7 @@ public class AiCompany : IMarketParticipant
         // current prices. Input opportunity costs are excluded because AI companies build
         // vertically integrated chains and produce their own inputs.
         var candidates = AiCompanyGenerator.AllFactories
-            .Select(f => (Factory: f, Score: AiCompanyGenerator.Score(f, netBalance)))
+            .Select(f => (Factory: f, Score: AiCompanyGenerator.Score(f, netBalance, fillRatios)))
             .Where(c => ComputeExpectedMargin(c.Factory(), priceIndex) > 0)
             .ToList();
 

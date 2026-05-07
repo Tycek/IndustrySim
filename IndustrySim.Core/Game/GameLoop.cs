@@ -267,9 +267,13 @@ public class GameLoop
         foreach (var company in State.AiCompanies)
             aiDepletedMines.AddRange(company.ProcessTurn(State.Market, _rng, participants));
 
-        // AI companies consider building new industries based on current price signals.
+        // AI companies consider building new industries based on price signals and stockpile levels.
+        var fillRatios = State.Market.StockpileCapacity
+            .Where(kv => kv.Value > 0)
+            .ToDictionary(kv => kv.Key,
+                          kv => State.Market.StockpileLevel.GetValueOrDefault(kv.Key) / kv.Value);
         foreach (var company in State.AiCompanies)
-            company.ConsiderBuildingIndustry(State.Market.PriceIndex, State.AiCompanies, State.Player, _rng);
+            company.ConsiderBuildingIndustry(State.Market.PriceIndex, State.AiCompanies, State.Player, _rng, fillRatios);
 
         // Every 10 turns there is a 30 % chance a new competitor enters the market.
         var newAiCompanies = new List<string>();

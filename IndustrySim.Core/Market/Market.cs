@@ -44,11 +44,9 @@ public class Market
     public static readonly IReadOnlyDictionary<string, double> ConsumptionRates =
         new Dictionary<string, double>
         {
-            [ResourceNames.SteelIngot]      = 5,
             [ResourceNames.SteelWire]       = 4,
             [ResourceNames.SteelBar]        = 4,
             [ResourceNames.SteelPlate]      = 4,
-            [ResourceNames.CopperIngot]     = 4,
             [ResourceNames.CopperWire]      = 3,
             [ResourceNames.CopperPipe]      = 3,
             [ResourceNames.Gas]             = 5,

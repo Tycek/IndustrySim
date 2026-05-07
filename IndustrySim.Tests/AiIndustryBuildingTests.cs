@@ -23,7 +23,7 @@ public class AiIndustryBuildingTests
         var priceIndex = new Dictionary<string, decimal>(Market.BasePrices);
 
         for (var i = 0; i < 100; i++)
-            ai.ConsiderBuildingIndustry(priceIndex, [], player, rng);
+            ai.ConsiderBuildingIndustry(priceIndex, [], player, rng, new Dictionary<string, double>());
 
         Assert.Empty(ai.Industries);
     }
@@ -42,7 +42,7 @@ public class AiIndustryBuildingTests
         };
 
         for (var i = 0; i < 100; i++)
-            ai.ConsiderBuildingIndustry(priceIndex, [], player, rng);
+            ai.ConsiderBuildingIndustry(priceIndex, [], player, rng, new Dictionary<string, double>());
 
         Assert.Empty(ai.Industries);
     }
@@ -62,7 +62,7 @@ public class AiIndustryBuildingTests
         };
 
         for (var i = 0; i < 100; i++)
-            ai.ConsiderBuildingIndustry(priceIndex, [], player, rng);
+            ai.ConsiderBuildingIndustry(priceIndex, [], player, rng, new Dictionary<string, double>());
 
         Assert.Empty(ai.Industries);
     }
@@ -84,7 +84,7 @@ public class AiIndustryBuildingTests
 
         // At 10 % probability per call, 200 attempts gives ~1 − 0.9^200 ≈ 100 % chance.
         for (var i = 0; i < 200 && ai.Industries.Count == 0; i++)
-            ai.ConsiderBuildingIndustry(priceIndex, [], player, rng);
+            ai.ConsiderBuildingIndustry(priceIndex, [], player, rng, new Dictionary<string, double>());
 
         Assert.NotEmpty(ai.Industries);
     }
@@ -105,7 +105,7 @@ public class AiIndustryBuildingTests
         };
 
         while (ai.Industries.Count == 0)
-            ai.ConsiderBuildingIndustry(priceIndex, [], player, rng);
+            ai.ConsiderBuildingIndustry(priceIndex, [], player, rng, new Dictionary<string, double>());
 
         Assert.True(ai.Balance < initial);
         Assert.Equal(ai.Industries[0].BuildCost, initial - ai.Balance);
@@ -129,7 +129,7 @@ public class AiIndustryBuildingTests
         };
 
         for (var i = 0; i < 200; i++)
-            ai.ConsiderBuildingIndustry(priceIndex, [], player, rng);
+            ai.ConsiderBuildingIndustry(priceIndex, [], player, rng, new Dictionary<string, double>());
 
         // If the only buildable industry with sufficient safety is one whose cost × 3 ≤ 1499,
         // the AI might still build it. We just verify that a CoalMine (cost 500, needs 1500)

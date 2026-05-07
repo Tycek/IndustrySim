@@ -126,18 +126,29 @@ public static class AiCompanyGenerator
     }
 
     /// <summary>
-    /// Scores a candidate industry against the current net balance.
+    /// Scores a candidate industry against the current net balance and market stockpile fill ratios.
     /// Higher score = stronger market signal to build this industry right now.
     /// Input deficit is allowed to drive the score negative (clamped to ScoreFloor).
     /// </summary>
-    internal static double Score(Func<IIndustry> factory, Dictionary<string, double> netBalance)
+    /// <param name="fillRatios">
+    /// Stockpile fill ratio (0=empty, 1=full) per resource. Resources without a market
+    /// stockpile (e.g. Coal, Iron Ore) are absent; they use a neutral default of 0.5.
+    /// </param>
+    internal static double Score(Func<IIndustry> factory, Dictionary<string, double> netBalance,
+        IReadOnlyDictionary<string, double>? fillRatios = null)
     {
         var industry = factory();
         var score    = BaseWeight;
 
         // Shortage in outputs: existing consumers need more of what we produce.
+        // Amplify the urgency when the market stockpile is depleted; dampen when full.
+        // Non-stockpiled resources use a neutral multiplier of 1.5 (fillRatio default = 0.5).
         foreach (var output in industry.OutputsProduced)
-            score += Math.Max(0, -netBalance.GetValueOrDefault(output.Name)) / output.Quantity;
+        {
+            var fillRatio = fillRatios?.GetValueOrDefault(output.Name, 0.5) ?? 0.5;
+            score += Math.Max(0, -netBalance.GetValueOrDefault(output.Name)) / output.Quantity
+                     * (2.0 - fillRatio);
+        }
 
         // Input availability: surplus boosts the score; deficit penalises it.
         // If the key is absent entirely (no producer exists in the economy), treat it as a
